@@ -1,3 +1,9 @@
+configs/*
+data/*
+private/*
+results/*
+saved_models/*
+artifacts/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
