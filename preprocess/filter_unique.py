@@ -244,18 +244,6 @@ class MinHash:
 			return np.array(signatures)
 
 
-def thread_lsh_packed(args):
-	return thread_lsh(*args)
-
-
-def thread_lsh(label, signature, no_of_bands):
-	bands = np.hsplit(
-		np.array(signature),
-		no_of_bands
-	)
-	return label, bands
-
-
 class LSH:
 	""" Locality Sensitive Hashing.
 	Attributes:
@@ -263,7 +251,7 @@ class LSH:
 		permutations (int): Number of permutations used in MinHash.
 	"""
 
-	def __init__(self, minhash=None, labels=None, no_of_bands=None, n_jobs=1):
+	def __init__(self, minhash=None, labels=None, no_of_bands=None):
 		""" Initialize the LSH object.
 		Args:
 			minhash (np.array): Object returned by MinHash class.
@@ -275,7 +263,6 @@ class LSH:
 		self._buckets = defaultdict(list)
 		self._i_bucket = defaultdict(list)
 		self.permutations = None
-		self.n_jobs = n_jobs
 		# Run methods if minhash and labels provided
 		if minhash and labels:
 			self.permutations = minhash.permutations
@@ -297,15 +284,16 @@ class LSH:
 		"""
 		if not self.no_of_bands:
 			self.no_of_bands = self.permutations // 2
-		# TODO make this use a multithread pool
-		with Pool(self.n_jobs) as p:
-			for label, bands in tqdm(p.imap(
-				thread_lsh_packed,
-				zip(labels, signatures, [self.no_of_bands]*len(labels))), total=len(labels)):
-				for band in bands:
-					bucket_id = hash(tuple(band))
-					self._buckets[bucket_id].append(label)
-					self._i_bucket[label].append(bucket_id)
+
+		for label, signature in tqdm(zip(labels, signatures), total=len(labels)):
+			bands = np.hsplit(
+				np.array(signature),
+				self.no_of_bands
+			)
+			for band in bands:
+				bucket_id = hash(tuple(band))
+				self._buckets[bucket_id].append(label)
+				self._i_bucket[label].append(bucket_id)
 
 	def _candidate_duplicates(self, bucket_ids, label, sensitivity, jaccard):
 		""" Identify candidate duplicates and check Jaccard Similarity.
@@ -552,8 +540,7 @@ if __name__ == '__main__':
 	print('Constructing LSH...')
 	lsh = LSH(
 			minhash,
-			list(range(len(tweets))),
-			n_jobs=8
+			list(range(len(tweets)))
 	)
 
 	print('Finding duplicates...')
