@@ -19,22 +19,30 @@ config.fetch_images = False
 def parse_article(article_dict):
 	url = article_dict['url']
 	html = article_dict['html']
+	title = ''
+	text = ''
+	authors = []
+	summary = ''
 	try:
 		article = Article(url, config=config)
 		article.download(html)
 		article.parse()
-		parsed_article = {
-			'url': url,
-			'title': article.title,
-			'text': article.text
-		}
+		title = article.title
+		text = article.text
+		authors = article.authors
+
+		article.nlp()
+		summary = article.summary
 	except Exception as e:
 		print(e)
-		parsed_article = {
-			'url': url,
-			'title': '',
-			'text': ''
-		}
+
+	parsed_article = {
+		'url': url,
+		'title': title,
+		'text': text,
+		'authors': authors,
+		'summary': summary
+	}
 
 	return parsed_article
 
