@@ -9,14 +9,17 @@ import re
 from multiprocessing import Pool, Manager
 
 import numpy as np
-from newspaper import Article, Config
+# from newspaper import Article, Config
 
 
-manager = Manager()
-articles = manager.dict()
-config = Config()
-config.fetch_images = False
+# manager = Manager()
+# articles = manager.dict()
+# config = Config()
+# config.fetch_images = False
 transl_table = dict([(ord(x), ord(y)) for x, y in zip(u"‘’´“”–-", u"'''\"\"--")])
+url_pattern = re.compile(r'(https:\/\/t\.co\/[\w]*\b) (QT)?')
+prefix = 'https://t.co/'
+len_url = len(prefix) + 10
 
 
 def parse_tweet(t):
@@ -41,42 +44,53 @@ def parse_tweet(t):
 				tweet_text = f'{tweet_text} QT: \"{r_t_text}\"'
 			elif r_tweet['type'] == 'replied_to':
 				pass
-	prefix = 'https://t.co/'
-	len_url = len(prefix) + 10
-	urls = []
-	while True:
-		idx = tweet_text.find(prefix)
-		if idx == -1:
-			break
-		a_text = ''
-		if tweet_text[idx+len_url+1:idx+len_url+3] != 'QT':
-			url = tweet_text[idx:idx+len_url]
-			urls.append(url)
-			left_text = tweet_text[:idx]
-			right_text = tweet_text[idx+len_url:]
-			if ('\"' in left_text or '\'' in left_text) and ('\"' in right_text or '\'' in right_text):
-				a_text = ''
-			elif '\"' in left_text or '\"' in right_text:
-				a_text = ''
-			else:
-				try:
-					if url in articles:
-						article = articles[url]
-					else:
-						article = Article(url, config=config)
-						article.download()
-						article.parse()
-						articles[url] = article
-					a_text = article.title.translate(transl_table)
-					a_check = a_text.lower().translate(str.maketrans('', '', string.punctuation))
-					t_check = tweet_text.lower().translate(str.maketrans('', '', string.punctuation))
-					if a_check not in t_check:
-						a_text = f'\"{a_text}\"'
-					else:
-						a_text = ''
-				except:
-					a_text = ''
-		tweet_text = tweet_text[:idx] + 'URL'  + ' ' + a_text + ' ' + tweet_text[idx+len_url:]
+	urls = {}
+	contains_quote = '\"' in tweet_text
+	for m in re.findall(url_pattern, tweet_text):
+		url = m.group(1)
+		qt = m.group(2)
+		urls[url] = {
+			'url': url,
+			'type': 'quoted' if qt is not None else 'external',
+			'quoted': contains_quote
+		}
+
+	# while True:
+	# 	idx = tweet_text.find(prefix)
+	# 	if idx == -1:
+	# 		break
+	#
+	# 	if tweet_text[idx+len_url+1:idx+len_url+3] == 'QT':
+	# 		tweet_text = tweet_text[:idx] + ' ' + tweet_text[idx+len_url:]
+	# 	else:
+	# 		url = tweet_text[idx:idx+len_url]
+	# left_text = tweet_text[:idx]
+	# right_text = tweet_text[idx+len_url:]
+	# left_quote = any(c == '\"' or c == '\'' for c in left_text)
+	# right_quote = any(c == '\"' or c == '\'' for c in right_text)
+	# left_s_quote = any(c == '\"' for c in left_text)
+	# right_s_quote = any(c == '\"' for c in right_text)
+	# a_text = ''
+	# if not (left_quote and right_quote) or not (left_s_quote or right_s_quote):
+	# 	try:
+	# 		if url in articles:
+	# 			article = articles[url]
+	# 		else:
+	# 			article = Article(url, config=config)
+	# 			article.download()
+	# 			article.parse()
+	# 			articles[url] = article
+	# 		a_text = article.title.translate(transl_table)
+	# 		a_check = a_text.lower().translate(str.maketrans('', '', string.punctuation))
+	# 		t_check = tweet_text.lower().translate(str.maketrans('', '', string.punctuation))
+	# 		if a_check not in t_check:
+	# 			a_text = f'\"{a_text}\"'
+	# 	except:
+	# 		pass
+
+	# urls.append(url)
+	# tweet_text = tweet_text[:idx] + 'URL' + ' ' + a_text + ' ' + tweet_text[idx+len_url:]
+
 	tweet['full_text'] = tweet_text
 	tweet['urls'] = urls
 	return tweet_id, tweet
@@ -107,7 +121,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-i', '--input_path', required=True)
 	parser.add_argument('-o', '--output_path', required=True)
-	parser.add_argument('-a', '--article_cache', required=True)
+	# parser.add_argument('-a', '--article_cache', required=True)
 	parser.add_argument('-s', '--seed', default=0, type=int)
 	args = parser.parse_args()
 
@@ -122,15 +136,15 @@ if __name__ == '__main__':
 		tweets[tweet_id] = tweet
 	print(f'Total tweets read: {len(tweets)}')
 
-	if os.path.exists(args.article_cache):
-		print('Adding tweet cached articles...')
-		with open(args.article_cache, 'r') as f:
-			article_cache = json.load(f)
-			for url, article_html in article_cache.items():
-				article = Article(url, config=config)
-				article.download(article_html)
-				article.parse()
-				articles[url] = article
+	# if os.path.exists(args.article_cache):
+	# 	print('Adding tweet cached articles...')
+	# 	with open(args.article_cache, 'r') as f:
+	# 		article_cache = json.load(f)
+	# 		for url, article_html in article_cache.items():
+	# 			article = Article(url, config=config)
+	# 			article.download(article_html)
+	# 			article.parse()
+	# 			articles[url] = article
 
 	print('Adding tweet references...')
 	adjusted_tweets = {}
@@ -143,12 +157,12 @@ if __name__ == '__main__':
 		adjusted_tweets.values(),
 		args.output_path
 	)
-	article_cache = {}
-	print('Saving articles...')
-	for url, article in articles.items():
-		article_cache[url] = article.html
+	# article_cache = {}
+	# print('Saving articles...')
+	# for url, article in articles.items():
+	# 	article_cache[url] = article.html
 
-	with open(args.article_cache, 'w') as f:
-		json.dump(article_cache, f)
+	# with open(args.article_cache, 'w') as f:
+	# 	json.dump(article_cache, f)
 
 	print('Done!')

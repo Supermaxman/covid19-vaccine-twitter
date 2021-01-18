@@ -7,5 +7,6 @@
 
 python preprocess/add_references.py \
     --input_path data/unique-v1.jsonl \
-    --output_path data/unique-ref-v1.jsonl \
-    --article_cache data/unique-ref-articles-v1.json
+    --output_path data/unique-ref-v1.jsonl
+
+#    --article_cache data/unique-ref-articles-v1.json
