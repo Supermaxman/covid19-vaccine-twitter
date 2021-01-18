@@ -49,7 +49,7 @@ def parse_tweet(t):
 	for url, qt in re.findall(url_pattern, tweet_text):
 		urls[url] = {
 			'url': url,
-			'type': 'quoted' if qt is not None else 'external',
+			'type': 'qt' if qt != '' else 'external',
 			'quoted': contains_quote
 		}
 
