@@ -11,4 +11,4 @@
 
 python preprocess/download_articles.py \
     --input_path data/unique-ref-v1.jsonl \
-    --data/unique-ref-articles-v1.json
+    --output_path data/unique-ref-articles-v1.json
