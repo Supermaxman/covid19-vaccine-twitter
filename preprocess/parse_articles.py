@@ -24,7 +24,7 @@ def parse_article(article_dict):
 	authors = []
 	summary = ''
 	try:
-		article = Article(url, config=config)
+		article = Article('', config=config)
 		article.download(html)
 		article.parse()
 		title = article.title
