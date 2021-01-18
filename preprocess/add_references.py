@@ -98,33 +98,11 @@ if __name__ == '__main__':
 		tweets[tweet_id] = tweet
 	print(f'Total tweets read: {len(tweets)}')
 
-	# if os.path.exists(args.article_cache):
-	# 	print('Adding tweet cached articles...')
-	# 	with open(args.article_cache, 'r') as f:
-	# 		article_cache = json.load(f)
-	# 		for url, article_html in article_cache.items():
-	# 			article = Article(url, config=config)
-	# 			article.download(article_html)
-	# 			article.parse()
-	# 			articles[url] = article
-
 	print('Adding tweet references...')
 	adjusted_tweets = {}
-	with Pool(processes=8) as p:
-		for tweet_id, tweet in tqdm(p.imap(parse_tweet, tweets.items()), total=len(tweets)):
-			adjusted_tweets[tweet_id] = tweet
-
-	print('Writing tweets...')
-	write_jsonl(
-		adjusted_tweets.values(),
-		args.output_path
-	)
-	# article_cache = {}
-	# print('Saving articles...')
-	# for url, article in articles.items():
-	# 	article_cache[url] = article.html
-
-	# with open(args.article_cache, 'w') as f:
-	# 	json.dump(article_cache, f)
+	with open(args.output_path, 'w') as f:
+		with Pool(processes=8) as p:
+			for tweet_id, tweet in tqdm(p.imap_unordered(parse_tweet, tweets.items()), total=len(tweets)):
+				f.write(json.dumps(tweet) + '\n')
 
 	print('Done!')
