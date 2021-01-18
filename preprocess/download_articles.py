@@ -7,6 +7,7 @@ import string
 from tqdm import tqdm
 import re
 from multiprocessing import Pool
+import csv
 
 import numpy as np
 from newspaper import Article, Config
@@ -21,11 +22,11 @@ def download_article(url):
 		article = Article(url, config=config)
 		article.download()
 		article_html = article.html
-		article_text = json.dumps({'url': url, 'article_html': article_html})
+		article_text = article_html
 	except:
 		article_text = None
 
-	return article_text
+	return url, article_text
 
 
 def read_jsonl(path):
@@ -77,11 +78,11 @@ if __name__ == '__main__':
 		print(f'{read_urls} articles already downloaded.')
 	external_urls = sorted(list(external_urls))
 	with open(args.output_path, 'a') as f:
+		writer = csv.writer(f, delimiter=',', quotechar='|')
 		with Pool(processes=8) as p:
-			for article_text in tqdm(p.imap_unordered(download_article, external_urls), total=len(external_urls)):
+			for url, article_text in tqdm(p.imap_unordered(download_article, external_urls), total=len(external_urls)):
 				if article_text is not None:
-					# f.write(article_text + '\n')
-					pass
+					writer.writerow([url, article_text])
 
 	print(f'{len(articles)} articles downloaded')
 	print('Done!')
