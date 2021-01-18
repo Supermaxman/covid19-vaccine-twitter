@@ -18,7 +18,7 @@ config.fetch_images = False
 
 def parse_article(article_dict):
 	url = article_dict['url']
-	html = article_dict['html']
+	html = article_dict['article_html']
 	title = ''
 	text = ''
 	authors = []
@@ -83,5 +83,6 @@ if __name__ == '__main__':
 	with open(args.output_path, 'w') as f:
 		with Pool(processes=8) as p:
 			for p_article in tqdm(p.imap_unordered(parse_article, articles), total=31150):
-				f.write(p_article + '\n')
+				if p_article is not None:
+					f.write(p_article + '\n')
 	print('Done!')
