@@ -17,7 +17,7 @@ import numpy as np
 # config = Config()
 # config.fetch_images = False
 transl_table = dict([(ord(x), ord(y)) for x, y in zip(u"‘’´“”–-", u"'''\"\"--")])
-url_pattern = re.compile(r'(https:\/\/t\.co\/[\w]*\b) (QT)?')
+url_pattern = re.compile(r'(https:\/\/t\.co\/[\w]*\b)( QT)?')
 prefix = 'https://t.co/'
 len_url = len(prefix) + 10
 
@@ -52,42 +52,6 @@ def parse_tweet(t):
 			'type': 'qt' if qt != '' else 'external',
 			'quoted': contains_quote
 		}
-
-	# while True:
-	# 	idx = tweet_text.find(prefix)
-	# 	if idx == -1:
-	# 		break
-	#
-	# 	if tweet_text[idx+len_url+1:idx+len_url+3] == 'QT':
-	# 		tweet_text = tweet_text[:idx] + ' ' + tweet_text[idx+len_url:]
-	# 	else:
-	# 		url = tweet_text[idx:idx+len_url]
-	# left_text = tweet_text[:idx]
-	# right_text = tweet_text[idx+len_url:]
-	# left_quote = any(c == '\"' or c == '\'' for c in left_text)
-	# right_quote = any(c == '\"' or c == '\'' for c in right_text)
-	# left_s_quote = any(c == '\"' for c in left_text)
-	# right_s_quote = any(c == '\"' for c in right_text)
-	# a_text = ''
-	# if not (left_quote and right_quote) or not (left_s_quote or right_s_quote):
-	# 	try:
-	# 		if url in articles:
-	# 			article = articles[url]
-	# 		else:
-	# 			article = Article(url, config=config)
-	# 			article.download()
-	# 			article.parse()
-	# 			articles[url] = article
-	# 		a_text = article.title.translate(transl_table)
-	# 		a_check = a_text.lower().translate(str.maketrans('', '', string.punctuation))
-	# 		t_check = tweet_text.lower().translate(str.maketrans('', '', string.punctuation))
-	# 		if a_check not in t_check:
-	# 			a_text = f'\"{a_text}\"'
-	# 	except:
-	# 		pass
-
-	# urls.append(url)
-	# tweet_text = tweet_text[:idx] + 'URL' + ' ' + a_text + ' ' + tweet_text[idx+len_url:]
 
 	tweet['full_text'] = tweet_text
 	tweet['urls'] = urls

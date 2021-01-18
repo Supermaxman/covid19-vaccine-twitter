@@ -62,12 +62,14 @@ if __name__ == '__main__':
 	for tweet_id, tweet in tqdm(tweets.items(), total=len(tweets)):
 		tweet_text = tweet['full_text']
 		for t_url, t_url_info in tweet['urls'].items():
+			t_replace_text = 'URL'
 			if t_url in articles:
 				t_article = articles[t_url]
-				t_title = t_article['title']
-				t_replace_text = f'URL: \"{t_title}\"'.translate(transl_table)
-			else:
-				t_replace_text = 'URL'
+				a_text = t_article['title'].translate(transl_table)
+				a_check = a_text.lower().translate(str.maketrans('', '', string.punctuation))
+				t_check = tweet_text.lower().translate(str.maketrans('', '', string.punctuation))
+				if a_check not in t_check:
+					t_replace_text += f': \"{a_text}\"'
 			tweet_text = tweet_text.replace(t_url, t_replace_text)
 		tweet['full_text'] = tweet_text
 
