@@ -19,5 +19,5 @@
 
 python preprocess/add_articles.py \
     --input_path data/unique-ref-v1.jsonl \
-    --articles_path unique-ref-parsed-articles-v1.jsonl \
+    --articles_path data/unique-ref-parsed-articles-v1.jsonl \
     --output_path data/unique-art-v1.jsonl
