@@ -68,14 +68,14 @@ if __name__ == '__main__':
 				external_urls.add(t_url)
 	print(f'{len(external_urls)} external URLs')
 	articles = {}
-	if os.path.exists(args.output_path):
-		read_urls = 0
-		article_lines = read_jsonl(args.output_path)
-		for article_line in article_lines:
-			url = article_line['url']
-			external_urls.remove(url)
-			read_urls += 1
-		print(f'{read_urls} articles already downloaded.')
+	# if os.path.exists(args.output_path):
+	# 	read_urls = 0
+	# 	article_lines = read_jsonl(args.output_path)
+	# 	for article_line in article_lines:
+	# 		url = article_line['url']
+	# 		external_urls.remove(url)
+	# 		read_urls += 1
+	# 	print(f'{read_urls} articles already downloaded.')
 	external_urls = sorted(list(external_urls))
 	with open(args.output_path, 'a') as f:
 		writer = csv.writer(f, delimiter=',', quotechar='|')
