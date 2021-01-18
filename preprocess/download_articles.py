@@ -41,6 +41,18 @@ def read_jsonl(path):
 	return examples
 
 
+def read_jsonl_generator(path):
+	with open(path, 'r') as f:
+		for line in f:
+			line = line.strip()
+			if line:
+				try:
+					ex = json.loads(line)
+					yield ex
+				except Exception as e:
+					print(e)
+
+
 def write_jsonl(data, path):
 	with open(path, 'w') as f:
 		for example in data:
@@ -75,7 +87,7 @@ if __name__ == '__main__':
 	articles = {}
 	if os.path.exists(args.output_path):
 		read_urls = 0
-		article_lines = read_jsonl(args.output_path)
+		article_lines = read_jsonl_generator(args.output_path)
 		for article_line in article_lines:
 			url = article_line['url']
 			external_urls.remove(url)
