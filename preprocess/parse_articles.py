@@ -79,16 +79,16 @@ if __name__ == '__main__':
 	random.seed(args.seed)
 
 	print(f'reading {args.input_path}')
-	articles = {}
+	articles = []
 	article_lines = read_jsonl(args.input_path)
 	for article in article_lines:
-		url = article['url']
-		articles[url] = article
+		articles.append(article)
 	print(f'Total articles read: {len(articles)}')
 	parsed_articles = []
 	with Pool(processes=8) as p:
-		for p_article in tqdm(p.imap_unordered(parse_article, articles.values()), total=len(articles)):
+		for p_article in tqdm(p.imap_unordered(parse_article, articles), total=len(articles)):
 			parsed_articles.append(p_article)
 	print(f'{len(parsed_articles)} articles parsed')
+
 	write_jsonl(parsed_articles, args.output_path)
 	print('Done!')
