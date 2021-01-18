@@ -33,8 +33,8 @@ def parse_article(article_dict):
 
 		article.nlp()
 		summary = article.summary
-	except Exception as e:
-		print(e)
+	except:
+		pass
 	try:
 		parsed_article = {
 			'url': url,
