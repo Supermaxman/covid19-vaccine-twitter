@@ -71,15 +71,9 @@ if __name__ == '__main__':
 	random.seed(args.seed)
 
 	print(f'reading {args.input_path}')
-	tweets = {}
-	tweet_list = read_jsonl(args.input_path)
-	for tweet in tweet_list:
-		tweet_id = tweet['data']['id']
-		tweets[tweet_id] = tweet
-	print(f'Total tweets read: {len(tweets)}')
-
 	external_urls = set()
-	for tweet_id, tweet in tweets.items():
+	tweets_list = read_jsonl_generator(args.input_path)
+	for tweet in tweets_list:
 		for t_url, t_url_info in tweet['urls'].items():
 			if t_url_info['type'] == 'external' and not t_url_info['quoted']:
 				external_urls.add(t_url)
