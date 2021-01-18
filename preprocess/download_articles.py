@@ -42,13 +42,6 @@ def read_jsonl(path):
 	return examples
 
 
-def write_jsonl(data, path):
-	with open(path, 'w') as f:
-		for example in data:
-			json_data = json.dumps(example)
-			f.write(json_data + '\n')
-
-
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-i', '--input_path', required=True)
@@ -87,7 +80,8 @@ if __name__ == '__main__':
 		with Pool(processes=8) as p:
 			for article_text in tqdm(p.imap_unordered(download_article, external_urls), total=len(external_urls)):
 				if article_text is not None:
-					f.write(article_text + '\n')
+					# f.write(article_text + '\n')
+					pass
 
 	print(f'{len(articles)} articles downloaded')
 	print('Done!')
