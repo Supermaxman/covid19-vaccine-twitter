@@ -287,7 +287,7 @@ class LSH:
 
 		for label, signature in tqdm(zip(labels, signatures), total=len(labels)):
 			bands = np.hsplit(
-				np.array(signature),
+				signature,
 				self.no_of_bands
 			)
 			for band in bands:
