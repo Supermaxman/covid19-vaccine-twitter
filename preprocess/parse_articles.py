@@ -35,19 +35,21 @@ def parse_article(article_dict):
 		summary = article.summary
 	except Exception as e:
 		print(e)
-
-	parsed_article = {
-		'url': url,
-		'title': title,
-		'text': text,
-		'authors': authors,
-		'summary': summary
-	}
-
+	try:
+		parsed_article = {
+			'url': url,
+			'title': title,
+			'text': text,
+			'authors': authors,
+			'summary': summary
+		}
+		parsed_article = json.dumps(parsed_article)
+	except:
+		parsed_article = None
 	return parsed_article
 
 
-def read_jsonl(path):
+def read_jsonl_generator(path):
 	examples = []
 	with open(path, 'r') as f:
 		for line in f:
@@ -79,16 +81,9 @@ if __name__ == '__main__':
 	random.seed(args.seed)
 
 	print(f'reading {args.input_path}')
-	articles = []
-	article_lines = read_jsonl(args.input_path)
-	for article in article_lines:
-		articles.append(article)
-	print(f'Total articles read: {len(articles)}')
-	parsed_articles = []
-	with Pool(processes=8) as p:
-		for p_article in tqdm(p.imap_unordered(parse_article, articles), total=len(articles)):
-			parsed_articles.append(p_article)
-	print(f'{len(parsed_articles)} articles parsed')
-
-	write_jsonl(parsed_articles, args.output_path)
+	articles = read_jsonl_generator(args.input_path)
+	with open(args.output_path, 'w') as f:
+		with Pool(processes=8) as p:
+			for p_article in tqdm(p.imap_unordered(parse_article, articles), total=31150):
+				f.write(p_article + '\n')
 	print('Done!')
