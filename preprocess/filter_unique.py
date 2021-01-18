@@ -503,7 +503,7 @@ if __name__ == '__main__':
 	np.random.seed(args.seed)
 	random.seed(args.seed)
 	tweets = {}
-	for file_name in os.listdir(args.input_path):
+	for file_name in sorted(os.listdir(args.input_path)):
 		file_path = os.path.join(args.input_path, file_name)
 		print(f'reading {file_path}')
 		tweet_lines = read_jsonl(file_path)
