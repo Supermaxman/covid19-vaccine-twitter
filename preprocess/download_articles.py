@@ -73,14 +73,11 @@ if __name__ == '__main__':
 	print(f'{len(external_urls)} external URLs')
 	external_urls = sorted(list(external_urls))
 	articles = {}
-	with Pool(processes=8) as p:
-		for url, article_html in tqdm(p.imap_unordered(download_article, external_urls), total=len(external_urls)):
-			if article_html is not None:
-				articles[url] = article_html
+	with open(args.output_path, 'w') as f:
+		with Pool(processes=8) as p:
+			for url, article_html in tqdm(p.imap_unordered(download_article, external_urls), total=len(external_urls)):
+				if article_html is not None:
+					f.write(json.dumps({'url': url, 'article_html': article_html}) + '\n')
 
 	print(f'{len(articles)} articles downloaded')
-	print('Writing articles...')
-	with open(args.output_path, 'w') as f:
-		json.dump(articles, f)
-
 	print('Done!')
