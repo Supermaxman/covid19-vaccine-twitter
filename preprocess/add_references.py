@@ -149,7 +149,7 @@ if __name__ == '__main__':
 	print('Adding tweet references...')
 	adjusted_tweets = {}
 	with Pool(processes=8) as p:
-		for tweet_id, tweet in tqdm(p.imap_unordered(parse_tweet, tweets.items()), total=len(tweets)):
+		for tweet_id, tweet in tqdm(p.imap(parse_tweet, tweets.items()), total=len(tweets)):
 			adjusted_tweets[tweet_id] = tweet
 
 	print('Writing tweets...')
