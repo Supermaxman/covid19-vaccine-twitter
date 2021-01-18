@@ -18,12 +18,14 @@ config.fetch_images = False
 
 def download_article(url):
 	try:
-			article = Article(url, config=config)
-			article.download()
-			article_html = article.html
+		article = Article(url, config=config)
+		article.download()
+		article_html = article.html
+		article_text = json.dumps({'url': url, 'article_html': article_html})
 	except:
-			article_html = None
-	return url, article_html
+		article_text = None
+
+	return article_text
 
 
 def read_jsonl(path):
@@ -71,13 +73,21 @@ if __name__ == '__main__':
 			if t_url_info['type'] == 'external' and not t_url_info['quoted']:
 				external_urls.add(t_url)
 	print(f'{len(external_urls)} external URLs')
-	external_urls = sorted(list(external_urls))
 	articles = {}
-	with open(args.output_path, 'w') as f:
+	if os.path.exists(args.output_path):
+		read_urls = 0
+		article_lines = read_jsonl(args.output_path)
+		for article_line in article_lines:
+			url = article_line['url']
+			external_urls.remove(url)
+			read_urls += 1
+		print(f'{read_urls} articles already downloaded.')
+	external_urls = sorted(list(external_urls))
+	with open(args.output_path, 'a') as f:
 		with Pool(processes=8) as p:
-			for url, article_html in tqdm(p.imap_unordered(download_article, external_urls), total=len(external_urls)):
-				if article_html is not None:
-					f.write(json.dumps({'url': url, 'article_html': article_html}) + '\n')
+			for article_text in tqdm(p.imap_unordered(download_article, external_urls), total=len(external_urls)):
+				if article_text is not None:
+					f.write(article_text + '\n')
 
 	print(f'{len(articles)} articles downloaded')
 	print('Done!')
