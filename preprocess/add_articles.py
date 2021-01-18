@@ -59,21 +59,19 @@ if __name__ == '__main__':
 
 	print(f'adding articles to tweets...')
 	transl_table = dict([(ord(x), ord(y)) for x, y in zip(u"‘’´“”–-\n\t", u"'''\"\"--  ")])
-	for tweet_id, tweet in tqdm(tweets.items(), total=len(tweets)):
-		tweet_text = tweet['full_text']
-		for t_url, t_url_info in tweet['urls'].items():
-			t_replace_text = 'URL'
-			if t_url in articles:
-				t_article = articles[t_url]
-				a_text = t_article['title'].translate(transl_table)
-				a_check = a_text.lower().translate(str.maketrans('', '', string.punctuation))
-				t_check = tweet_text.lower().translate(str.maketrans('', '', string.punctuation))
-				if a_check not in t_check:
-					t_replace_text += f': \"{a_text}\"'
-			tweet_text = tweet_text.replace(t_url, t_replace_text)
-		tweet['full_text'] = tweet_text
-
-	print('Writing tweets...')
-	write_jsonl(tweets.values(), args.output_path)
-
+	with open(args.output_path, 'w') as f:
+		for tweet_id, tweet in tqdm(tweets.items(), total=len(tweets)):
+			tweet_text = tweet['full_text']
+			for t_url, t_url_info in tweet['urls'].items():
+				t_replace_text = 'URL'
+				if t_url in articles:
+					t_article = articles[t_url]
+					a_text = t_article['title'].translate(transl_table)
+					a_check = a_text.lower().translate(str.maketrans('', '', string.punctuation))
+					t_check = tweet_text.lower().translate(str.maketrans('', '', string.punctuation))
+					if a_check not in t_check:
+						t_replace_text += f': \"{a_text}\"'
+				tweet_text = tweet_text.replace(t_url, t_replace_text)
+			tweet['full_text'] = tweet_text
+			f.write(json.dumps(tweet) + '\n')
 	print('Done!')
