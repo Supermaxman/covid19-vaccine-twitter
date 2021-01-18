@@ -99,7 +99,6 @@ if __name__ == '__main__':
 	print(f'Total tweets read: {len(tweets)}')
 
 	print('Adding tweet references...')
-	adjusted_tweets = {}
 	with open(args.output_path, 'w') as f:
 		with Pool(processes=8) as p:
 			for tweet_id, tweet in tqdm(p.imap_unordered(parse_tweet, tweets.items()), total=len(tweets)):
