@@ -50,17 +50,15 @@ def parse_article(article_dict):
 
 
 def read_jsonl_generator(path):
-	examples = []
 	with open(path, 'r') as f:
 		for line in f:
 			line = line.strip()
 			if line:
 				try:
 					ex = json.loads(line)
-					examples.append(ex)
+					yield ex
 				except Exception as e:
 					print(e)
-	return examples
 
 
 def write_jsonl(data, path):
