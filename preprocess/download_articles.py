@@ -78,7 +78,6 @@ if __name__ == '__main__':
 			if t_url_info['type'] == 'external' and not t_url_info['quoted']:
 				external_urls.add(t_url)
 	print(f'{len(external_urls)} external URLs')
-	articles = {}
 	if os.path.exists(args.output_path):
 		read_urls = 0
 		article_lines = read_jsonl_generator(args.output_path)
@@ -88,11 +87,13 @@ if __name__ == '__main__':
 			read_urls += 1
 		print(f'{read_urls} articles already downloaded.')
 	external_urls = sorted(list(external_urls))
+	num_downloaded = 0
 	with open(args.output_path, 'a') as f:
 		with Pool(processes=8) as p:
 			for url, article_text in tqdm(p.imap_unordered(download_article, external_urls), total=len(external_urls)):
 				if article_text is not None:
+					num_downloaded += 1
 					f.write(article_text + '\n')
 
-	print(f'{len(articles)} articles downloaded')
+	print(f'{num_downloaded} articles downloaded')
 	print('Done!')
