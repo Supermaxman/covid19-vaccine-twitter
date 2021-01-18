@@ -509,6 +509,7 @@ if __name__ == '__main__':
 	parser.add_argument('-i', '--input_path', required=True)
 	parser.add_argument('-o', '--output_path', required=True)
 	parser.add_argument('-j', '--min_jaccard', default=0.25, type=float)
+	parser.add_argument('-s', '--seed', default=0, type=int)
 	args = parser.parse_args()
 
 	np.random.seed(args.seed)
@@ -528,7 +529,6 @@ if __name__ == '__main__':
 	print(f'Total tweets read: {len(tweets)}')
 
 	transl_table = dict([(ord(x), ord(y)) for x, y in zip(u"‘’´“”–-", u"'''\"\"--")])
-	seed = 0
 	all_text = []
 	t_map = {}
 	for t_idx, (tweet_id, tweet) in enumerate(tqdm(list(tweets.items()))):
@@ -545,7 +545,7 @@ if __name__ == '__main__':
 		n_gram_type='char',
 		permutations=100,
 		hash_bits=64,
-		seed=seed,
+		seed=args.seed,
 		n_jobs=8
 	)
 
