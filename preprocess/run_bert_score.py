@@ -80,7 +80,6 @@ if __name__ == '__main__':
 		t_scores = {}
 		for (m_id, m), m_score in zip(misinfo.items(), tweet_scores):
 			m_score = float(m_score)
-			print(f'{tweet_id}: {m_id} - {m_score:.2f}')
 			t_scores[m_id] = m_score
 		scores[tweet_id] = t_scores
 
