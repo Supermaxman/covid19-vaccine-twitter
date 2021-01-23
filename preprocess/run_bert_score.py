@@ -22,7 +22,7 @@ def read_jsonl(path):
 				try:
 					ex = json.loads(line)
 					examples.append(ex)
-					if len(examples) >= 32:
+					if len(examples) >= 8:
 						break
 				except Exception as e:
 					print(e)
