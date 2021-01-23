@@ -55,13 +55,14 @@ if __name__ == '__main__':
 	m_ids = [m_id for m_id in misinfo]
 	tweet_texts = [t['full_text'][:max_chars] for t in tweets]
 	m_texts = [m['text'] for m_id, m in misinfo.items()]
+	# TODO need to pad both tweets and misinfo to be divisible by batch size
 	t_p, t_r, t_f1 = scorer.score(
 		cands=tweet_texts,
 		refs=m_texts,
 		verbose=True,
 		batch_size=2
 	)
-	t_f1 = t_f1.detatch().numpy()
+	t_f1 = t_f1.detach().numpy()
 
 	for tweet_id, tweet_scores in zip(tweet_ids, t_f1):
 		for m_id, m_score in zip(m_ids, tweet_scores):
