@@ -49,13 +49,21 @@ if __name__ == '__main__':
 		device=device
 	)
 	max_chars = int(np.percentile([len(t['full_text']) for t in tweets], 95))
-	tweet_ids = [t['id'] for t in tweets]
+	tweet_ids = [t['id'] for t in tweets][:10]
 	m_ids = [m_id for m_id in misinfo]
+	tweet_texts = [t['full_text'][:max_chars] for t in tweets][:10]
+	m_texts = [m['text'] for m_id, m in misinfo.items()]
 	t_p, t_r, t_f1 = scorer.score(
-		cands=[t['full_text'][:max_chars] for t in tweets],
-		refs=[m['text'] for m_id, m in misinfo.items()],
+		cands=tweet_texts,
+		refs=m_texts,
 		verbose=True,
 		batch_size=8
 	)
+
+	for tweet_id, tweet_scores in zip(tweet_ids, t_f1):
+		for m_id, m_score in zip(m_ids, tweet_scores):
+			m_score = float(m_score.detatch().item())
+			print(f'{tweet_id}: {m_id} - {m_score:.2f}')
+
 
 
