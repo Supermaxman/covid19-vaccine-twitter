@@ -59,7 +59,7 @@ if __name__ == '__main__':
 		cands=tweet_texts,
 		refs=m_texts,
 		verbose=True,
-		batch_size=8
+		batch_size=4
 	)
 
 	for tweet_id, tweet_scores in zip(tweet_ids, t_f1):
