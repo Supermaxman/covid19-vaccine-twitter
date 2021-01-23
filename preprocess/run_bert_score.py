@@ -22,8 +22,6 @@ def read_jsonl(path):
 				try:
 					ex = json.loads(line)
 					examples.append(ex)
-					if len(examples) >= 8:
-						break
 				except Exception as e:
 					print(e)
 	return examples
@@ -61,21 +59,24 @@ if __name__ == '__main__':
 			tweet_texts.append(tweet_text)
 			m_texts.append(m_text)
 
-	# TODO need to pad both tweets and misinfo to be divisible by batch size
 	t_p, t_r, t_f1 = scorer.score(
 		cands=tweet_texts,
 		refs=m_texts,
 		verbose=True,
-		batch_size=2
+		batch_size=32
 	)
 	t_f1 = t_f1.view(len(tweets), len(misinfo)).detach().numpy()
-	print(type(t_f1))
-	print(t_f1.shape)
+	scores = {}
 	for t, tweet_scores in zip(tweets, t_f1):
 		tweet_id = t['id']
+		t_scores = {}
 		for (m_id, m), m_score in zip(misinfo.items(), tweet_scores):
 			m_score = float(m_score)
 			print(f'{tweet_id}: {m_id} - {m_score:.2f}')
+			t_scores[m_id] = m_score
+		scores[tweet_id] = t_scores
 
+	with open('../data/scores.json', 'w') as f:
+		json.dump(scores, f)
 
 
