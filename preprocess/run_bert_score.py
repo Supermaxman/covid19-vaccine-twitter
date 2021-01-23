@@ -51,10 +51,16 @@ if __name__ == '__main__':
 		device=device
 	)
 	max_chars = int(np.percentile([len(t['full_text']) for t in tweets], 95))
-	tweet_ids = [t['id'] for t in tweets]
-	m_ids = [m_id for m_id in misinfo]
-	tweet_texts = [t['full_text'][:max_chars] for t in tweets]
-	m_texts = [m['text'] for m_id, m in misinfo.items()]
+	tweet_texts = []
+	m_texts = []
+	for t in tweets:
+		tweet_id = t['id']
+		tweet_text = t['full_text'][:max_chars]
+		for m_id, m in misinfo.items():
+			m_text = m['text']
+			tweet_texts.append(tweet_text)
+			m_texts.append(m_text)
+
 	# TODO need to pad both tweets and misinfo to be divisible by batch size
 	t_p, t_r, t_f1 = scorer.score(
 		cands=tweet_texts,
@@ -62,13 +68,12 @@ if __name__ == '__main__':
 		verbose=True,
 		batch_size=2
 	)
-	t_f1 = t_f1.detach().numpy()
+	t_f1 = t_f1.view(len(tweets), len(misinfo)).detach().numpy()
 	print(type(t_f1))
 	print(t_f1.shape)
-	for t_idx, tweet_id in enumerate(tweet_ids):
-		tweet_scores = t_f1[t_idx]
-		for m_idx, m_id in enumerate(m_ids):
-			m_score = tweet_scores[m_idx]
+	for t, tweet_scores in zip(tweets, t_f1):
+		tweet_id = t['id']
+		for (m_id, m), m_score in zip(misinfo.items(), tweet_scores):
 			m_score = float(m_score)
 			print(f'{tweet_id}: {m_id} - {m_score:.2f}')
 
