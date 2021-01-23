@@ -61,10 +61,11 @@ if __name__ == '__main__':
 		verbose=True,
 		batch_size=2
 	)
+	t_f1 = t_f1.detatch().numpy()
 
 	for tweet_id, tweet_scores in zip(tweet_ids, t_f1):
 		for m_id, m_score in zip(m_ids, tweet_scores):
-			m_score = float(m_score.detatch().item())
+			m_score = float(m_score)
 			print(f'{tweet_id}: {m_id} - {m_score:.2f}')
 
 
