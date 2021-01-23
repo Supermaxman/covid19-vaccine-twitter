@@ -36,19 +36,29 @@ def write_jsonl(data, path):
 
 if __name__ == '__main__':
 	input_path = '../data/unique-art-v1.jsonl'
-	model_type = 'digitalepidemiologylab/covid-twitter-bert-v2'
+	misinfo_path = '../data/misinfo.json'
+	output_path = '../data/scores.json'
 	device = 'cuda:4'
+	# best results from COVIDLies paper
+	model_type = 'digitalepidemiologylab/covid-twitter-bert-v2'
+	# decided for bert-large-uncased by BERTScore library experiments
+	num_layers = 18
+	batch_size = 32
+	max_length_percentile = 95
+
 	tweets = read_jsonl(input_path)
 	print(f'Total tweets read: {len(tweets)}')
-	with open('../data/misinfo.json') as f:
+	with open(misinfo_path) as f:
 		misinfo = json.load(f)
 
+	# https://arxiv.org/abs/1904.09675
+	# https://github.com/Tiiiger/bert_score
 	scorer = BERTScorer(
 		model_type=model_type,
 		num_layers=18,
 		device=device
 	)
-	max_chars = int(np.percentile([len(t['full_text']) for t in tweets], 95))
+	max_chars = int(np.percentile([len(t['full_text']) for t in tweets], max_length_percentile))
 	tweet_texts = []
 	m_texts = []
 	for t in tweets:
@@ -63,7 +73,7 @@ if __name__ == '__main__':
 		cands=tweet_texts,
 		refs=m_texts,
 		verbose=True,
-		batch_size=32
+		batch_size=batch_size
 	)
 	t_f1 = t_f1.view(len(tweets), len(misinfo)).detach().numpy()
 	scores = {}
@@ -76,7 +86,7 @@ if __name__ == '__main__':
 			t_scores[m_id] = m_score
 		scores[tweet_id] = t_scores
 
-	with open('../data/scores.json', 'w') as f:
+	with open(output_path, 'w') as f:
 		json.dump(scores, f)
 
 
