@@ -1,16 +1,11 @@
-import os
+
 import json
-from collections import defaultdict
-from tqdm import tqdm
+import argparse
 import logging
 import transformers
-transformers.tokenization_utils.logger.setLevel(logging.ERROR)
-transformers.configuration_utils.logger.setLevel(logging.ERROR)
-transformers.modeling_utils.logger.setLevel(logging.ERROR)
-import bert_score
 from bert_score import BERTScorer
-import torch
 import numpy as np
+import random
 
 
 def read_jsonl(path):
@@ -27,38 +22,41 @@ def read_jsonl(path):
 	return examples
 
 
-def write_jsonl(data, path):
-	with open(path, 'w') as f:
-		for example in data:
-			json_data = json.dumps(example)
-			f.write(json_data + '\n')
-
-
 if __name__ == '__main__':
-	input_path = '../data/unique-art-v1.jsonl'
-	misinfo_path = '../data/misinfo.json'
-	output_path = '../data/scores.json'
-	device = 'cuda:4'
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-i', '--input_path', required=True)
+	parser.add_argument('-o', '--output_path', required=True)
+	parser.add_argument('-m', '--misinfo_path', required=True)
+	parser.add_argument('-gpu', '--device', default='cuda:0')
 	# best results from COVIDLies paper
-	model_type = 'digitalepidemiologylab/covid-twitter-bert-v2'
+	parser.add_argument('-mt', '--model_type', default='digitalepidemiologylab/covid-twitter-bert-v2')
 	# decided for bert-large-uncased by BERTScore library experiments
-	num_layers = 18
-	batch_size = 32
-	max_length_percentile = 95
+	parser.add_argument('-ml', '--num_layers', default=18, type=int)
+	parser.add_argument('-bs', '--batch_size', default=32, type=int)
+	parser.add_argument('-mlp', '--max_length_percentile', default=95, type=int)
+	parser.add_argument('-s', '--seed', default=0, type=int)
+	args = parser.parse_args()
 
-	tweets = read_jsonl(input_path)
+	np.random.seed(args.seed)
+	random.seed(args.seed)
+
+	transformers.tokenization_utils.logger.setLevel(logging.ERROR)
+	transformers.configuration_utils.logger.setLevel(logging.ERROR)
+	transformers.modeling_utils.logger.setLevel(logging.ERROR)
+
+	tweets = read_jsonl(args.input_path)
 	print(f'Total tweets read: {len(tweets)}')
-	with open(misinfo_path) as f:
+	with open(args.misinfo_path) as f:
 		misinfo = json.load(f)
 
 	# https://arxiv.org/abs/1904.09675
 	# https://github.com/Tiiiger/bert_score
 	scorer = BERTScorer(
-		model_type=model_type,
-		num_layers=18,
-		device=device
+		model_type=args.model_type,
+		num_layers=args.num_layers,
+		device=args.device
 	)
-	max_chars = int(np.percentile([len(t['full_text']) for t in tweets], max_length_percentile))
+	max_chars = int(np.percentile([len(t['full_text']) for t in tweets], args.max_length_percentile))
 	tweet_texts = []
 	m_texts = []
 	for t in tweets:
@@ -73,7 +71,7 @@ if __name__ == '__main__':
 		cands=tweet_texts,
 		refs=m_texts,
 		verbose=True,
-		batch_size=batch_size
+		batch_size=args.batch_size
 	)
 	t_f1 = t_f1.view(len(tweets), len(misinfo)).detach().numpy()
 	scores = {}
@@ -86,7 +84,7 @@ if __name__ == '__main__':
 			t_scores[m_id] = m_score
 		scores[tweet_id] = t_scores
 
-	with open(output_path, 'w') as f:
+	with open(args.output_path, 'w') as f:
 		json.dump(scores, f)
 
 
