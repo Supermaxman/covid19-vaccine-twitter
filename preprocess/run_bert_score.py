@@ -63,9 +63,12 @@ if __name__ == '__main__':
 		batch_size=2
 	)
 	t_f1 = t_f1.detach().numpy()
-
-	for tweet_id, tweet_scores in zip(tweet_ids, t_f1):
-		for m_id, m_score in zip(m_ids, tweet_scores):
+	print(type(t_f1))
+	print(t_f1.shape)
+	for t_idx, tweet_id in enumerate(tweet_ids):
+		tweet_scores = t_f1[t_idx]
+		for m_idx, m_id in enumerate(m_ids):
+			m_score = tweet_scores[m_idx]
 			m_score = float(m_score)
 			print(f'{tweet_id}: {m_id} - {m_score:.2f}')
 
