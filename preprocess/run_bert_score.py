@@ -22,6 +22,8 @@ def read_jsonl(path):
 				try:
 					ex = json.loads(line)
 					examples.append(ex)
+					if len(examples) >= 32:
+						break
 				except Exception as e:
 					print(e)
 	return examples
@@ -49,9 +51,9 @@ if __name__ == '__main__':
 		device=device
 	)
 	max_chars = int(np.percentile([len(t['full_text']) for t in tweets], 95))
-	tweet_ids = [t['id'] for t in tweets][:10]
+	tweet_ids = [t['id'] for t in tweets]
 	m_ids = [m_id for m_id in misinfo]
-	tweet_texts = [t['full_text'][:max_chars] for t in tweets][:10]
+	tweet_texts = [t['full_text'][:max_chars] for t in tweets]
 	m_texts = [m['text'] for m_id, m in misinfo.items()]
 	t_p, t_r, t_f1 = scorer.score(
 		cands=tweet_texts,
