@@ -559,16 +559,9 @@ if __name__ == '__main__':
 				if close_idx in seen_idxs:
 					duplicate = True
 					close_id = t_map[close_idx]
-					duplicate_ids.append(close_id)
+				duplicate_ids.append(close_id)
 			tweet['duplicates'] = duplicate_ids
 			tweet['is_duplicate'] = duplicate
-			# if duplicate:
-			# 	print('----')
-			# 	print(tweet['data']['text'])
-			# 	print()
-			# 	close_tweet = tweets[close_id]
-			# 	print(close_tweet['data']['text'])
-			# 	continue
 		if not duplicate:
 			seen_idxs.add(t_idx)
 			unique_tweets[tweet_id] = tweet
