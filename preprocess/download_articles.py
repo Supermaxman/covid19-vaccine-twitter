@@ -83,8 +83,9 @@ if __name__ == '__main__':
 		article_lines = read_jsonl_generator(args.output_path)
 		for article_line in article_lines:
 			url = article_line['url']
-			external_urls.remove(url)
-			read_urls += 1
+			if url in external_urls:
+				external_urls.remove(url)
+				read_urls += 1
 		print(f'{read_urls} articles already downloaded.')
 	external_urls = sorted(list(external_urls))
 	num_downloaded = 0
