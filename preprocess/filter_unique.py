@@ -556,7 +556,8 @@ if __name__ == '__main__':
 		if len(closest_tweets) > 0:
 			close_id = None
 			for close_idx in closest_tweets:
-				duplicate = close_idx in seen_idxs
+				if close_idx in seen_idxs:
+					duplicate = True
 				close_id = t_map[close_idx]
 				duplicate_ids.append(close_id)
 		tweet['duplicates'] = duplicate_ids
