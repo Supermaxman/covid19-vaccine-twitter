@@ -552,16 +552,15 @@ if __name__ == '__main__':
 			min_jaccard=args.min_jaccard
 		)
 		duplicate = False
+		duplicate_ids = []
 		if len(closest_tweets) > 0:
 			close_id = None
-			duplicate_ids = []
 			for close_idx in closest_tweets:
-				if close_idx in seen_idxs:
-					duplicate = True
-					close_id = t_map[close_idx]
+				duplicate = close_idx in seen_idxs
+				close_id = t_map[close_idx]
 				duplicate_ids.append(close_id)
-			tweet['duplicates'] = duplicate_ids
-			tweet['is_duplicate'] = duplicate
+		tweet['duplicates'] = duplicate_ids
+		tweet['is_duplicate'] = duplicate
 		if not duplicate:
 			seen_idxs.add(t_idx)
 			unique_tweets[tweet_id] = tweet
