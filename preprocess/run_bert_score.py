@@ -38,7 +38,7 @@ if __name__ == '__main__':
 	parser.add_argument('-mt', '--model_type', default='digitalepidemiologylab/covid-twitter-bert-v2')
 	# decided for bert-large-uncased by BERTScore library experiments
 	parser.add_argument('-ml', '--num_layers', default=18, type=int)
-	parser.add_argument('-bs', '--batch_size', default=32, type=int)
+	parser.add_argument('-bs', '--batch_size', default=128, type=int)
 	parser.add_argument('-mlp', '--max_length_percentile', default=95, type=int)
 	parser.add_argument('-s', '--seed', default=0, type=int)
 	parser.add_argument('-tc', '--total_chunks', default=5, type=int)
@@ -90,14 +90,17 @@ if __name__ == '__main__':
 			verbose=True,
 			batch_size=args.batch_size
 		)
-		t_f1 = t_f1.view(len(chunk_tweets), len(misinfo)).detach().numpy()
-		for t, tweet_scores in zip(chunk_tweets, t_f1):
+		t_f1_vals = t_f1.view(len(chunk_tweets), len(misinfo)).detach().numpy()
+		for t, tweet_scores in zip(chunk_tweets, t_f1_vals):
 			tweet_id = t['id']
 			t_scores = {}
 			for (m_id, m), m_score in zip(misinfo.items(), tweet_scores):
 				m_score = float(m_score)
 				t_scores[m_id] = m_score
 			scores[tweet_id] = t_scores
+		del t_p
+		del t_r
+		del t_f1
 
 	with open(args.output_path, 'w') as f:
 		json.dump(scores, f)
