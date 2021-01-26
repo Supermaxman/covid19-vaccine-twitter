@@ -30,9 +30,9 @@ def parse_article(article_dict):
 		title = article.title
 		text = article.text
 		authors = article.authors
-
-		article.nlp()
-		summary = article.summary
+		# TODO in the future use article.summary
+		# article.nlp()
+		summary = article.title
 	except:
 		pass
 	try:
