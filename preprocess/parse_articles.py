@@ -82,7 +82,7 @@ if __name__ == '__main__':
 	articles = read_jsonl_generator(args.input_path)
 	with open(args.output_path, 'w') as f:
 		with Pool(processes=8) as p:
-			for p_article in tqdm(p.imap_unordered(parse_article, articles), total=285660):
+			for p_article in tqdm(p.imap_unordered(parse_article, articles), total=283832):
 				if p_article is not None:
 					f.write(p_article + '\n')
 	print('Done!')
