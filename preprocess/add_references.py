@@ -52,15 +52,16 @@ def parse_tweet(t):
 		if qt != '':
 			url_type = 'quote'
 		else:
-			resp = requests.head(url)
-			code = resp.status_code
-			# redirect
-			if code == 301:
-				url = resp.headers['Location']
-				url_type = 'external'
-			else:
-				url_type = 'unknown'
-			time.sleep(0.1)
+			url_type = 'external'
+			# resp = requests.head(url)
+			# code = resp.status_code
+			# # redirect
+			# if code == 301:
+			# 	url = resp.headers['Location']
+			# 	url_type = 'external'
+			# else:
+			# 	url_type = 'unknown'
+			# time.sleep(0.1)
 		urls[url] = {
 			'url': url,
 			'type': url_type,
