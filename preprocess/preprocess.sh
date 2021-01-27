@@ -26,7 +26,8 @@ python preprocess/run_bert_score.py \
     --input_path data/unique-art-v1.jsonl \
     --misinfo_path data/misinfo.json \
     --output_path data/scores.json \
-    --device cuda:4
+    --device cuda:4 \
+    --batch_size 32
 
 python preprocess/select_candidates.py \
     --input_path data/unique-art-v1.jsonl \

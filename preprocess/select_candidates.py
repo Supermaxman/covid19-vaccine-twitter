@@ -60,7 +60,7 @@ if __name__ == '__main__':
 			key=lambda x: x[0],
 			reverse=True
 		)
-
+	candidate_ids = set()
 	candidate_tweets = []
 	for m_id, m in misinfo.items():
 		m_rel = misinfo_scores[m_id][:args.top_k]
@@ -75,7 +75,9 @@ if __name__ == '__main__':
 				'score': t_score
 			}
 			rank += 1
-			candidate_tweets.append(tweet)
+			if tweet_id not in candidate_ids:
+				candidate_tweets.append(tweet)
+				candidate_ids.add(tweet_id)
 
 	print(f'Total candidate tweets: {len(candidate_tweets)}')
 	write_jsonl(candidate_tweets, args.output_path)
