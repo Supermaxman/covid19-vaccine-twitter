@@ -60,7 +60,7 @@ def parse_tweet(t):
 				url_type = 'external'
 			else:
 				url_type = 'unknown'
-			time.sleep(1)
+			time.sleep(0.1)
 		urls[url] = {
 			'url': url,
 			'type': url_type,
