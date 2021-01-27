@@ -7,6 +7,8 @@ import string
 from tqdm import tqdm
 import re
 from multiprocessing import Pool, Manager
+import requests
+import time
 
 import numpy as np
 # from newspaper import Article, Config
@@ -47,9 +49,21 @@ def parse_tweet(t):
 	urls = {}
 	contains_quote = '\"' in tweet_text
 	for url, qt in re.findall(url_pattern, tweet_text):
+		if qt != '':
+			url_type = 'quote'
+		else:
+			resp = requests.head(url)
+			code = resp.status_code
+			# redirect
+			if code == 301:
+				url = resp.headers['Location']
+				url_type = 'external'
+			else:
+				url_type = 'unknown'
+			time.sleep(1)
 		urls[url] = {
 			'url': url,
-			'type': 'qt' if qt != '' else 'external',
+			'type': url_type,
 			'quoted': contains_quote
 		}
 

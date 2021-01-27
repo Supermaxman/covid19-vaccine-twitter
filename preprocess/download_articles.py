@@ -76,7 +76,8 @@ if __name__ == '__main__':
 	for tweet in tweets_list:
 		for t_url, t_url_info in tweet['urls'].items():
 			if t_url_info['type'] == 'external' and not t_url_info['quoted']:
-				external_urls.add(t_url)
+				ext_url = t_url_info['url']
+				external_urls.add(ext_url)
 	print(f'{len(external_urls)} external URLs')
 	if os.path.exists(args.output_path):
 		read_urls = 0
