@@ -3,7 +3,7 @@
 python preprocess/filter_unique.py \
     --input_path data/raw-v1 \
     --output_path data/unique-v1.jsonl \
-    --min_jaccard 0.75
+    --min_jaccard 0.5
 
 python preprocess/add_references.py \
     --input_path data/unique-v1.jsonl \
