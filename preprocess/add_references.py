@@ -20,8 +20,6 @@ import numpy as np
 # config.fetch_images = False
 transl_table = dict([(ord(x), ord(y)) for x, y in zip(u"‘’´“”–-", u"'''\"\"--")])
 url_pattern = re.compile(r'(https:\/\/t\.co\/[\w]*\b)( QT)?')
-prefix = 'https://t.co/'
-len_url = len(prefix) + 10
 
 
 def parse_tweet(t):

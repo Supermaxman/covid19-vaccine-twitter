@@ -519,10 +519,14 @@ if __name__ == '__main__':
 	transl_table = dict([(ord(x), ord(y)) for x, y in zip(u"‘’´“”–-", u"'''\"\"--")])
 	all_text = []
 	t_map = {}
+	url_pattern = re.compile(r'(https:\/\/t\.co\/[\w]*\b)( QT)?')
 	for t_idx, (tweet_id, tweet) in enumerate(tqdm(list(tweets.items()))):
 		tweet_text = tweet['data']['text'].translate(transl_table).lower().translate(
 			str.maketrans('', '', string.punctuation)).strip().replace(',', '')
 		tweet_text = tweet_text.replace('\n', ' ').replace('\t', ' ')
+		for url, qt in re.findall(url_pattern, tweet_text):
+			tweet_text = tweet_text.replace(url, 'URL')
+
 		all_text.append(tweet_text)
 		t_map[t_idx] = tweet_id
 
