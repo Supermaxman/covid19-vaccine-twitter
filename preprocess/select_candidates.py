@@ -34,6 +34,7 @@ if __name__ == '__main__':
 	parser.add_argument('-m', '--misinfo_path', required=True)
 	parser.add_argument('-sc', '--score_path', required=True)
 	parser.add_argument('-o', '--output_path', required=True)
+	parser.add_argument('-mtt', '--misinfo_text_type', default='text')
 	parser.add_argument('-k', '--top_k', default=100, type=int)
 	args = parser.parse_args()
 
@@ -70,7 +71,7 @@ if __name__ == '__main__':
 			if 'candidates' not in tweet:
 				tweet['candidates'] = {}
 			tweet['candidates'][m_id] = {
-				'text': m['text'],
+				'text': m[args.misinfo_text_type],
 				'rank': rank,
 				'score': t_score
 			}

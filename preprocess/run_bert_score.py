@@ -34,6 +34,7 @@ if __name__ == '__main__':
 	parser.add_argument('-o', '--output_path', required=True)
 	parser.add_argument('-m', '--misinfo_path', required=True)
 	parser.add_argument('-gpu', '--device', default='cuda:0')
+	parser.add_argument('-mtt', '--misinfo_text_type', default='text')
 	# best results from COVIDLies paper
 	parser.add_argument('-mt', '--model_type', default='digitalepidemiologylab/covid-twitter-bert-v2')
 	# decided for bert-large-uncased by BERTScore library experiments
@@ -80,7 +81,7 @@ if __name__ == '__main__':
 			tweet_id = t['id']
 			tweet_text = t['full_text'][:max_chars]
 			for m_id, m in misinfo.items():
-				m_text = m['text']
+				m_text = m[args.misinfo_text_type]
 				tweet_texts.append(tweet_text)
 				m_texts.append(m_text)
 
