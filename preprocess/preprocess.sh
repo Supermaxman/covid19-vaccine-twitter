@@ -24,16 +24,17 @@ python preprocess/add_articles.py \
     --articles_path data/unique-ref-parsed-articles-v1.jsonl \
     --output_path data/unique-art-v1.jsonl
 
+mkdir data/unique-art-v1-index-data
 
 python preprocess/convert_tweets_to_jsonl.py \
     --input_path data/unique-art-v1.jsonl \
-    --output_path data/unique-art-v1-index.jsonl
+    --output_path data/unique-art-v1-index-data/unique-art-v1-index.jsonl
 
 python -m pyserini.index \
     -collection JsonCollection \
     -generator DefaultLuceneDocumentGenerator \
     -threads 8 \
-    -input data/unique-art-v1-index.jsonl \
+    -input data/unique-art-v1-index-data \
     -index data/unique-v1 \
     -storePositions \
     -storeDocvectors \

@@ -17,6 +17,13 @@ def read_jsonl(path):
 	return examples
 
 
+def write_jsonl(data, path):
+	with open(path, 'w') as f:
+		for example in data:
+			json_data = json.dumps(example)
+			f.write(json_data + '\n')
+
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-i', '--input_path', required=True)
@@ -37,7 +44,6 @@ if __name__ == '__main__':
 		)
 
 	print('Writing jsonl tweets...')
-	with open(args.output_path, 'w') as f:
-		json.dump(formatted_tweets, f)
+	write_jsonl(formatted_tweets, args.output_path)
 
 	print('Done!')
