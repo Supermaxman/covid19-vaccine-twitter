@@ -42,7 +42,7 @@ if __name__ == '__main__':
 			score = hit.score
 			if m_id in scores[hit.docid]:
 				# not really proper way to compare bm25 scores, but should be ok for such similar queries for now
-				score = max(scores[hit.docid], hit.score)
+				score = max(scores[hit.docid][m_id], hit.score)
 			scores[hit.docid][m_id] = score
 
 	with open(args.output_path, 'w') as f:
