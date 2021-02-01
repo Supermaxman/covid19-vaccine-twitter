@@ -1,17 +1,6 @@
 
 import json
 import argparse
-import logging
-import transformers
-from bert_score import BERTScorer
-import numpy as np
-import random
-from tqdm import tqdm
-
-
-def divide_chunks(l, n):
-	for i in range(0, len(l), n):
-		yield l[i:i + n]
 
 
 def read_jsonl(path):
@@ -26,13 +15,6 @@ def read_jsonl(path):
 				except Exception as e:
 					print(e)
 	return examples
-
-
-def write_jsonl(data, path):
-	with open(path, 'w') as f:
-		for example in data:
-			json_data = json.dumps(example)
-			f.write(json_data + '\n')
 
 
 if __name__ == '__main__':
@@ -55,6 +37,7 @@ if __name__ == '__main__':
 		)
 
 	print('Writing jsonl tweets...')
-	write_jsonl(formatted_tweets, args.output_path)
+	with open(args.output_path, 'w') as f:
+		json.dump(formatted_tweets, f)
 
 	print('Done!')

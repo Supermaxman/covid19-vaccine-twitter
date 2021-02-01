@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+#export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.7.10-0.fc30.x86_64/
+
 python preprocess/filter_unique.py \
     --input_path data/raw-v1 \
     --output_path data/unique-v1.jsonl \
@@ -30,7 +32,7 @@ python preprocess/convert_tweets_to_jsonl.py \
 python -m pyserini.index \
     -collection JsonCollection \
     -generator DefaultLuceneDocumentGenerator \
-    -threads 12 \
+    -threads 8 \
     -input data/unique-art-v1-index.jsonl \
     -index data/unique-v1 \
     -storePositions \
