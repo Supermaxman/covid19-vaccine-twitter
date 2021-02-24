@@ -31,6 +31,7 @@ if __name__ == '__main__':
 	parser.add_argument('-gpu', '--gpus', default='0')
 	parser.add_argument('-lt', '--load_checkpoint', default=None)
 	parser.add_argument('-ft', '--fine_tune', default=False, action='store_true')
+	parser.add_argument('-csl', '--calc_seq_len', default=False, action='store_true')
 	parser.add_argument('-mip', '--misinfo_path', default=None)
 	parser.add_argument('-mt', '--model_type', default='lm')
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
@@ -123,6 +124,30 @@ if __name__ == '__main__':
 			tokenizer
 		)
 	)
+
+	if args.calc_seq_len:
+		data_loader = DataLoader(
+			train_dataset,
+			batch_size=1,
+			shuffle=True,
+			num_workers=num_workers,
+			collate_fn=MisinfoBatchCollator(
+				args.max_seq_len,
+				args.use_tpus,
+				misinfo,
+				tokenizer
+			)
+		)
+		import numpy as np
+		from tqdm import tqdm
+		logging.info('Calculating seq len stats...')
+		seq_lens = []
+		for batch in tqdm(data_loader):
+			seq_len = batch['input_ids'].shape[-1]
+			seq_lens.append(seq_len)
+		p = np.percentile(seq_lens, 95)
+		logging.info(f'95-percentile: {p}')
+		exit()
 
 	num_batches_per_step = (len(gpus) if not args.use_tpus else tpu_cores)
 	updates_epoch = len(train_dataset) // (args.batch_size * num_batches_per_step)

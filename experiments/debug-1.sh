@@ -13,7 +13,7 @@ MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
 #MISINFO_THRESHOLD=0.2
 
 MISINFO_BATCH_SIZE=4
-MISINFO_MAX_SEQ_LEN=128
+MISINFO_MAX_SEQ_LEN=512
 MISINFO_EMB_SIZE=100
 
 MISINFO_NUM_GPUS=1
@@ -63,6 +63,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --learning_rate 5e-4 \
       --epochs 10 \
       --fine_tune \
+      --calc_seq_len \
       --gpus ${MISINFO_TRAIN_GPUS}
 fi
 
