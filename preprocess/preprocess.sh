@@ -24,34 +24,34 @@ python preprocess/add_articles.py \
     --articles_path data/unique-ref-parsed-articles-v1.jsonl \
     --output_path data/unique-art-v1.jsonl
 
-mkdir data/unique-art-v1-index-data
+#mkdir data/unique-art-v1-index-data
+#
+#python preprocess/convert_tweets_to_jsonl.py \
+#    --input_path data/unique-art-v1.jsonl \
+#    --output_path data/unique-art-v1-index-data/unique-art-v1-index.jsonl
+#
+#python -m pyserini.index \
+#    -collection JsonCollection \
+#    -generator DefaultLuceneDocumentGenerator \
+#    -threads 8 \
+#    -input data/unique-art-v1-index-data \
+#    -index data/unique-v1 \
+#    -storePositions \
+#    -storeDocvectors \
+#    -storeRaw
+#
+#python preprocess/search_index.py \
+#    --index_path data/unique-v1 \
+#    --query_path data/misinfo.json \
+#    --output_path data/bm25-scores-v1.json \
+#    --top_k 200
 
-python preprocess/convert_tweets_to_jsonl.py \
-    --input_path data/unique-art-v1.jsonl \
-    --output_path data/unique-art-v1-index-data/unique-art-v1-index.jsonl
-
-python -m pyserini.index \
-    -collection JsonCollection \
-    -generator DefaultLuceneDocumentGenerator \
-    -threads 8 \
-    -input data/unique-art-v1-index-data \
-    -index data/unique-v1 \
-    -storePositions \
-    -storeDocvectors \
-    -storeRaw
-
-python preprocess/search_index.py \
-    --index_path data/unique-v1 \
-    --query_path data/misinfo.json \
-    --output_path data/bm25-scores-v1.json \
-    --top_k 200
-
-python preprocess/select_candidates.py \
-    --input_path data/unique-art-v1.jsonl \
-    --misinfo_path data/misinfo.json \
-    --score_path data/bm25-scores-v1.json \
-    --output_path data/unique-art-v1-bm25-candidates.jsonl \
-    --top_k 200
+#python preprocess/select_candidates.py \
+#    --input_path data/unique-art-v1.jsonl \
+#    --misinfo_path data/misinfo.json \
+#    --score_path data/bm25-scores-v1.json \
+#    --output_path data/unique-art-v1-bm25-candidates.jsonl \
+#    --top_k 200
 
 python preprocess/run_bert_score.py \
     --input_path data/unique-art-v1.jsonl \
@@ -88,3 +88,14 @@ python preprocess/merge_candidates.py \
     --alternate_path data/unique-art-v1-candidates-alternate.jsonl \
     --output_path data/unique-art-v1-candidates-merged.jsonl
 
+python preprocess/merge_candidates.py \
+    --input_path data/unique-art-v1-candidates-merged.jsonl \
+    --alternate_path data/unique-art-v1-bm25-candidates.jsonl \
+    --output_path data/unique-art-v1-candidates-bert-bm25-merged.jsonl
+
+
+python preprocess/create_split.py \
+    --input_path data/unique-art-v1-annotated-bert-bm25-merged.jsonl \
+    --output_path data/v1 \
+    --test_size 0.2 \
+    --dev_size 0.1 \
