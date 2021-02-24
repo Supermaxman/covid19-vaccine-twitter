@@ -251,7 +251,8 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 			self.config.hidden_size,
 			self.emb_size
 		)
-		self.temperature = Parameter(torch.ones(1, dtype=torch.float))
+		# initialized value to 0.07
+		self.temperature = Parameter(torch.ones(1, dtype=torch.float)) * 0.07
 
 	def forward(self, input_ids, attention_mask, token_type_ids, batch):
 		# [num_misinfo + bsize, seq_len, hidden_size]
@@ -276,7 +277,7 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		# [num_misinfo, emb_size]
 		m_embs = F.normalize(self.m_embedding_layer(m_features), p=2, dim=-1)
 		# [bsize, emb_size] x [emb_size, num_misinfo] -> [bsize, num_misinfo]
-		logits = torch.matmul(ex_embs, m_embs.t()) * torch.exp(self.temperature)
+		logits = torch.matmul(ex_embs, m_embs.t()) * torch.clip(torch.exp(self.temperature), min=-100.0, max=100.0)
 		return ex_embs, m_embs, logits
 
 

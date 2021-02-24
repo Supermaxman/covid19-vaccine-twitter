@@ -60,7 +60,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
       --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
       --batch_size ${MISINFO_BATCH_SIZE} \
-      --learning_rate 5e-4 \
+      --learning_rate 5e-5 \
       --epochs 10 \
       --fine_tune \
       --gpus ${MISINFO_TRAIN_GPUS}
