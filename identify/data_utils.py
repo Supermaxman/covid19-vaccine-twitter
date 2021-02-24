@@ -320,7 +320,7 @@ class MisinfoBatchCollator(object):
 					labels[ex_idx, m_idx] = m_label
 					ex_m_ids.append(m_id)
 				m_ids.append(ex_m_ids)
-			b_idx = ex_idx + len(self.misinfo)
+			b_idx = len(self.misinfo) + ex_idx
 			self.pad_and_apply(ex['input_ids'], input_ids, b_idx)
 			self.pad_and_apply(ex['attention_mask'], attention_mask, b_idx)
 			self.pad_and_apply(ex['token_type_ids'], token_type_ids, b_idx)
