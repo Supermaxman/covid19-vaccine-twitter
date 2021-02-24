@@ -4,8 +4,25 @@ import argparse
 from sklearn.model_selection import train_test_split
 import random
 import numpy as np
+import json
 
-from data_utils import read_jsonl, write_jsonl
+
+def read_jsonl(path):
+	examples = []
+	with open(path, 'r') as f:
+		for line in f:
+			line = line.strip()
+			if line:
+				ex = json.loads(line)
+				examples.append(ex)
+	return examples
+
+
+def write_jsonl(data, path):
+	with open(path, 'w') as f:
+		for example in data:
+			json_data = json.dumps(example)
+			f.write(json_data + '\n')
 
 
 if __name__ == '__main__':

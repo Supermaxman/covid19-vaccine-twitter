@@ -98,4 +98,4 @@ python preprocess/create_split.py \
     --input_path data/unique-art-v1-annotated-bert-bm25-merged.jsonl \
     --output_path data/v1 \
     --test_size 0.2 \
-    --dev_size 0.1 \
+    --dev_size 0.1
