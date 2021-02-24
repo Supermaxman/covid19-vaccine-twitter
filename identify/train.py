@@ -9,14 +9,15 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import loggers as pl_loggers
 
 from model_utils import *
-from data_utils import MisinfoDataset, MisinfoBatchCollator, load_dataset
+from data_utils import MisinfoDataset, MisinfoBatchCollator, read_jsonl
 
 import torch
 
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-s', '--split_path', required=True)
+	parser.add_argument('-tp', '--train_path', required=True)
+	parser.add_argument('-vp', '--val_path', required=True)
 	parser.add_argument('-pm', '--pre_model_name', default='nboost/pt-biobert-base-msmarco')
 	parser.add_argument('-mn', '--model_name', default='pt-biobert-base-msmarco')
 	parser.add_argument('-sd', '--save_directory', default='models')
@@ -74,14 +75,10 @@ if __name__ == '__main__':
 
 	logging.info(f'Loading tokenizer: {args.pre_model_name}')
 	tokenizer = BertTokenizerFast.from_pretrained(args.pre_model_name)
-	logging.info(f'Loading dataset: {args.split_path}')
-
-	with open(args.split_path, 'r') as f:
-		split = json.load(f)
-	train_data = None
-	if args.fine_tune:
-		train_data = split['train']
-	val_data = split['eval']
+	logging.info(f'Loading train dataset: {args.train_path}')
+	train_data = read_jsonl(args.train_path)
+	logging.info(f'Loading val dataset: {args.val_path}')
+	val_data = read_jsonl(args.val_path)
 
 	logging.info(f'Loading misinfo: {args.misinfo_path}')
 	with open(args.misinfo_path, 'r') as f:
@@ -89,25 +86,14 @@ if __name__ == '__main__':
 
 		logging.info(f'Loaded misconception info.')
 	logging.info('Loading datasets...')
-	train_dataset_args = dict(
+	train_dataset = MisinfoDataset(
 		documents=train_data,
-		tokenizer=tokenizer,
-	)
-	train_dataset = load_dataset(
-		args.split_path,
-		train_dataset_args,
-		name='train'
+		tokenizer=tokenizer
 	)
 
-	val_dataset_args = dict(
+	val_dataset = MisinfoDataset(
 		documents=val_data,
-		tokenizer=tokenizer,
-	)
-
-	val_dataset = load_dataset(
-		args.split_path,
-		val_dataset_args,
-		name='val'
+		tokenizer=tokenizer
 	)
 
 	logging.info(f'train={len(train_dataset)}, val={len(val_dataset)}')

@@ -94,6 +94,8 @@ python preprocess/merge_candidates.py \
     --output_path data/unique-art-v1-candidates-bert-bm25-merged.jsonl
 
 
+# code for merging annotations is in notebooks on GPU04
+# Train size: 3735, Dev size: 415, Test size: 1038
 python preprocess/create_split.py \
     --input_path data/unique-art-v1-annotated-bert-bm25-merged.jsonl \
     --output_path data/v1 \
