@@ -280,47 +280,55 @@ class MisinfoBatchCollator(object):
 		# {m_id -> {title, text, alternate_text, source}}
 		self.misinfo = misinfo
 		self.tokenizer = tokenizer
-		self.m_pad_seq_len = 0
 		for m_id, m in self.misinfo.items():
 			m['token_data'] = tokenizer(
 				m['text']
 			)
-			self.m_pad_seq_len = max(self.m_pad_seq_len, min(len(m['token_data']['input_ids']), self.max_seq_len))
 		self.labeled = labeled
 
 	def __call__(self, examples):
 		ids = []
 		m_ids = []
 		# [labels..., tweets...]
-		batch_size = len(self.misinfo) + len(examples)
-		pad_seq_len = self.m_pad_seq_len
+		pad_seq_len = 0
 
 		for ex in examples:
 			pad_seq_len = max(pad_seq_len, min(len(ex['input_ids']), self.max_seq_len))
+		# TODO if force_max_seq_len then m_idx_map should have all m_ids in it to maintain same batch size or mask
+		m_idx_map = {}
+		for ex_idx, ex in enumerate(examples):
+			ids.append(ex['id'])
+			ex_m_ids = []
+			for m_id, m_label in ex['labels'].items():
+				if m_id not in m_idx_map:
+					m_idx_map[m_id] = len(m_idx_map)
+				ex_m_ids.append(m_id)
+			m_ids.append(ex_m_ids)
 
+		for m_id, m_idx in m_idx_map.items():
+			m = self.misinfo[m_id]
+			pad_seq_len = max(pad_seq_len, min(len(m['token_data']['input_ids']), self.max_seq_len))
+
+		batch_size = len(m_idx_map) + len(examples)
 		input_ids = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 		attention_mask = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 		token_type_ids = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 
-		labels = torch.zeros([len(examples), len(self.misinfo)], dtype=torch.float)
-
-		m_idx_map = {}
-		for m_idx, (m_id, m) in enumerate(self.misinfo.items()):
-			self.pad_and_apply(m['token_data']['input_ids'], input_ids, m_idx)
-			self.pad_and_apply(m['token_data']['attention_mask'], attention_mask, m_idx)
-			self.pad_and_apply(m['token_data']['token_type_ids'], token_type_ids, m_idx)
-			m_idx_map[m_id] = m_idx
-
-		for ex_idx, ex in enumerate(examples):
-			ids.append(ex['id'])
-			if self.labeled:
-				ex_m_ids = []
+		labels = torch.zeros([len(examples), len(m_idx_map)], dtype=torch.float)
+		if self.labeled:
+			for ex_idx, ex in enumerate(examples):
 				for m_id, m_label in ex['labels'].items():
 					m_idx = m_idx_map[m_id]
 					labels[ex_idx, m_idx] = m_label
-					ex_m_ids.append(m_id)
-				m_ids.append(ex_m_ids)
-			b_idx = len(self.misinfo) + ex_idx
+
+		for m_id, m_idx in m_idx_map.items():
+			m = self.misinfo[m_id]
+			self.pad_and_apply(m['token_data']['input_ids'], input_ids, m_idx)
+			self.pad_and_apply(m['token_data']['attention_mask'], attention_mask, m_idx)
+			self.pad_and_apply(m['token_data']['token_type_ids'], token_type_ids, m_idx)
+
+		for ex_idx, ex in enumerate(examples):
+			b_idx = len(m_idx_map) + ex_idx
 			self.pad_and_apply(ex['input_ids'], input_ids, b_idx)
 			self.pad_and_apply(ex['attention_mask'], attention_mask, b_idx)
 			self.pad_and_apply(ex['token_type_ids'], token_type_ids, b_idx)
@@ -328,7 +336,7 @@ class MisinfoBatchCollator(object):
 		batch = {
 			'id': ids,
 			'm_ids': m_ids,
-			'num_misinfo': len(self.misinfo),
+			'num_misinfo': len(m_idx_map),
 			'num_examples': len(examples),
 			'input_ids': input_ids,
 			'attention_mask': attention_mask,
