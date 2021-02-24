@@ -12,8 +12,9 @@ DATASET=v1
 MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
 #MISINFO_THRESHOLD=0.2
 
-MISINFO_BATCH_SIZE=8
+MISINFO_BATCH_SIZE=4
 MISINFO_MAX_SEQ_LEN=128
+MISINFO_EMB_SIZE=100
 
 MISINFO_NUM_GPUS=1
 MISINFO_TRAIN=true
@@ -48,10 +49,10 @@ handler()
 trap handler SIGINT
 
 if [[ ${MISINFO_TRAIN} = true ]]; then
-    echo "Training MISINFO model..."
+    echo "Training misinfo model..."
     python identify/train.py \
       --model_type lm \
-      --emb_size 100 \
+      --emb_size ${MISINFO_EMB_SIZE} \
       --misinfo_path ${DATASET_PATH}/misinfo.json \
       --train_path ${DATASET_PATH}/train.jsonl \
       --val_path ${DATASET_PATH}/dev.jsonl \
@@ -66,7 +67,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
 fi
 
 #if [[ ${MISINFO_RUN} = true ]]; then
-#    echo "Running split ${SPLIT} MISINFO..."
+#    echo "Running misinfo..."
 #    python identify/predict.py \
 #      --model_type lm-gcn-expanded \
 #      --create_edge_features \
@@ -96,7 +97,7 @@ echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
 python gpu/free_gpus.py -i ${MISINFO_GPUS}
 
 #if [[ ${MISINFO_EVAL} = true ]]; then
-#    echo "Evaluating MISINFO model..."
+#    echo "Evaluating misinfo model..."
 #    mkdir -p ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}
 #    python identify/format_eval.py \
 #      --input_path ${MISINFO_SPLIT_FILES} \
