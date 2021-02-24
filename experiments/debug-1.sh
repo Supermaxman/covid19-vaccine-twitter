@@ -49,7 +49,7 @@ trap handler SIGINT
 
 if [[ ${MISINFO_TRAIN} = true ]]; then
     echo "Training MISINFO model..."
-    python MISINFO/MISINFO_train.py \
+    python identify/train.py \
       --model_type lm \
       --emb_size 100 \
       --misinfo_path ${DATASET_PATH}/misinfo.json \
@@ -67,7 +67,7 @@ fi
 
 #if [[ ${MISINFO_RUN} = true ]]; then
 #    echo "Running split ${SPLIT} MISINFO..."
-#    python MISINFO/MISINFO_predict.py \
+#    python identify/predict.py \
 #      --model_type lm-gcn-expanded \
 #      --create_edge_features \
 #      --lex_edge_expanded dep,pos \
@@ -85,7 +85,7 @@ fi
 #      --load_trained_model \
 #      --gpus ${MISINFO_EVAL_GPUS} \
 #    ; \
-#    python MISINFO/format_MISINFO_predictions.py \
+#    python identify/format_predictions.py \
 #      --input_path ${ARTIFACTS_PATH}/${RUN_NAME}_SPLIT_${SPLIT}_${RUN_ID} \
 #      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_SPLIT_${SPLIT}_${RUN_ID}/predictions.MISINFO
 #fi
@@ -98,12 +98,12 @@ python gpu/free_gpus.py -i ${MISINFO_GPUS}
 #if [[ ${MISINFO_EVAL} = true ]]; then
 #    echo "Evaluating MISINFO model..."
 #    mkdir -p ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}
-#    python MISINFO/format_MISINFO_eval.py \
+#    python identify/format_eval.py \
 #      --input_path ${MISINFO_SPLIT_FILES} \
 #      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/all.run \
 #      --threshold ${MISINFO_THRESHOLD}
 #
-#    python MISINFO/MISINFO_eval.py \
+#    python identify/eval.py \
 #      --label_path ${DATASET_PATH}/downloaded_tweets_labeled.jsonl \
 #      --run_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/all.run \
 #      > ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/eval.txt \
