@@ -277,7 +277,7 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		# [num_misinfo, emb_size]
 		m_embs = F.normalize(self.m_embedding_layer(m_features), p=2, dim=-1)
 		# [bsize, emb_size] x [emb_size, num_misinfo] -> [bsize, num_misinfo]
-		logits = torch.matmul(ex_embs, m_embs.t()) * torch.clip(torch.exp(self.temperature), min=-100.0, max=100.0)
+		logits = torch.matmul(ex_embs, m_embs.t()) * torch.clamp(torch.exp(self.temperature), min=-100.0, max=100.0)
 		return ex_embs, m_embs, logits
 
 
