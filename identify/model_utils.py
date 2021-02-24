@@ -7,6 +7,7 @@ from torch.nn.parameter import Parameter
 import torch.nn.functional as F
 import torch
 import torch.distributed as dist
+import numpy as np
 import os
 import math
 import logging
@@ -170,7 +171,11 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			labels = torch.cat([x[f'{name}_batch_labels'] for x in outputs], dim=0)
 
 			if self.threshold is None:
-				threshold_range = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+				threshold_range = np.linspace(
+					start=0.0,
+					stop=1.0,
+					num=100
+				)
 			else:
 				threshold_range = [self.threshold]
 			max_metric = float('-inf')
