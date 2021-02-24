@@ -235,7 +235,6 @@ class MisinfoDataset(Dataset):
 			tweet_text = filter_tweet_text(tweet_text)
 			# if create_edge_features:
 			# 	tweet_parse = [get_token_features(x) for x in nlp(tweet_text)]
-			# TODO work on this
 			token_data = tokenizer(
 				tweet_text
 			)
@@ -303,7 +302,7 @@ class MisinfoBatchCollator(object):
 		attention_mask = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 		token_type_ids = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 
-		labels = torch.zeros([len(examples), len(self.misinfo)], dtype=torch.long)
+		labels = torch.zeros([len(examples), len(self.misinfo)], dtype=torch.float)
 
 		m_idx_map = {}
 		for m_idx, (m_id, m) in enumerate(self.misinfo.items()):
