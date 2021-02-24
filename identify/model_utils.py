@@ -252,7 +252,7 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 			self.emb_size
 		)
 		# initialized value to 0.07
-		self.temperature = Parameter(torch.ones(1, dtype=torch.float)) * 0.07
+		self.temperature = Parameter(torch.ones(1, dtype=torch.float) * 0.07)
 
 	def forward(self, input_ids, attention_mask, token_type_ids, batch):
 		# [num_misinfo + bsize, seq_len, hidden_size]
