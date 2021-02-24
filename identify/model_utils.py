@@ -166,9 +166,9 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 	def _eval_epoch_end(self, outputs, name):
 		if not self.predict_mode:
-			loss = torch.cat([x[f'{name}_batch_loss'] for x in outputs], dim=0).mean()
-			logits = torch.cat([x[f'{name}_batch_logits'] for x in outputs], dim=0)
-			labels = torch.cat([x[f'{name}_batch_labels'] for x in outputs], dim=0)
+			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0).mean()
+			logits = torch.cat([x[f'{name}_batch_logits'].flatten() for x in outputs], dim=0)
+			labels = torch.cat([x[f'{name}_batch_labels'].flatten() for x in outputs], dim=0)
 
 			if self.threshold is None:
 				threshold_range = np.linspace(
