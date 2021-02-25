@@ -248,8 +248,8 @@ class MisinfoBatchSampler(Sampler):
 		self.pos_count = pos_count
 		self.neg_count = neg_count
 		self.batch_size = self.pos_count + self.neg_count
-		self.pos_count = sum([len(x) for x in self.m_pos_examples.values()])
-		self.neg_count = sum([len(x) for x in self.m_neg_examples.values()])
+		self.total_pos_count = sum([len(x) for x in self.m_pos_examples.values()])
+		self.total_neg_count = sum([len(x) for x in self.m_neg_examples.values()])
 
 	def __iter__(self):
 		# create new generator if this is the first time, otherwise re-create same generator with same seed
@@ -259,7 +259,7 @@ class MisinfoBatchSampler(Sampler):
 			self.generator.manual_seed(self.seed)
 
 		batch = []
-		num_batches = self.pos_count // self.batch_size
+		num_batches = self.total_pos_count // self.batch_size
 		for b_idx in range(num_batches):
 			m_idxs = self.sample_misinfo(self.pos_count, self.generator)
 			for m_idx in m_idxs:
@@ -270,7 +270,7 @@ class MisinfoBatchSampler(Sampler):
 			batch = []
 
 	def __len__(self):
-		return self.pos_count // self.batch_size
+		return self.total_pos_count // self.batch_size
 
 	def sample_misinfo(self, m_count, generator):
 		m_s_indices = torch.randperm(
