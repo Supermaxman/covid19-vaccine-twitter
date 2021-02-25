@@ -6,7 +6,6 @@ from typing import Iterator
 
 import torch
 from torch.utils.data import Dataset, Sampler
-from torch.utils.data.sampler import T_co
 from tqdm import tqdm
 import random
 from collections import defaultdict
@@ -222,7 +221,7 @@ def get_token_features(token):
 	return token_data
 
 
-class MisinfoBatchSampler:
+class MisinfoBatchSampler(Sampler):
 	def __init__(self, dataset, pos_count: int, neg_count: int = 0):
 		super().__init__(dataset)
 		self.dataset = dataset
