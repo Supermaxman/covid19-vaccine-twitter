@@ -45,24 +45,29 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			self.config = self.bert.config
 		self.save_hyperparameters()
 
-	def _dim_loss(self, logits, pos_logits, labels_mask, dim):
-		# axis 1: each example over different misinfo
-		# axis 0: each misinfo over different examples
+	def _dim_loss(self, logits, labels, dim):
+		labels_mask = labels.float()
+		# non-positive logits are -1e9
+		pos_logits = (logits + ((1.0 - labels_mask) * -1e9))
+		# non-negative logits are -1e9
+		neg_logits = (logits + (labels_mask * -1e9))
+		eps = 1e-6
+		# [ex_count, m_count]
+		pos_loss = (-pos_logits) * labels_mask
+		# [ex_count, m_count]
+		norm_loss = torch.log(
+			# [ex_count, 1] * [ex_count, m_count] -> [ex_count, m_count]
+			torch.exp(neg_logits).sum(dim=dim, keepdim=True) + torch.exp(pos_logits) + eps
+		) * labels_mask
+		# [ex_count, m_count]
+		loss = pos_loss + norm_loss
+
 		# [ex_count, 1]
 		m_pos_count = labels_mask.sum(dim=dim, keepdim=True)
 		# [ex_count, 1]
-		m_pos_loss = -pos_logits.sum(dim=dim, keepdim=True)
-		# [ex_count, 1]
-		m_norm_loss = m_pos_count * torch.log(torch.exp(logits).sum(dim=dim, keepdim=True))
-		# [ex_count, 1]
-		m_loss = m_pos_loss + m_norm_loss
-
-		pos_scores = (logits + ((1.0 - labels_mask) * -1e9))
-		neg_scores = (logits + (labels_mask * -1e9))
-		# [ex_count, 1]
-		neg_scores = neg_scores.max(dim=dim, keepdim=True)[0]
+		neg_logits = neg_logits.max(dim=dim, keepdim=True)[0]
 		# [1]
-		pos_correct_count = pos_scores.gt(neg_scores).float().sum(dim=dim).sum()
+		pos_correct_count = pos_logits.gt(neg_logits).float().sum(dim=dim).sum()
 		# [1]
 		pos_total_count = m_pos_count.squeeze(dim=dim).sum()
 
@@ -70,7 +75,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		if accuracy.isnan().item():
 			accuracy = torch.zeros(1, dtype=torch.float)
 
-		return m_loss, pos_correct_count, pos_total_count, accuracy
+		return loss, pos_correct_count, pos_total_count, accuracy
 
 	def _forward_step(self, batch, batch_nb):
 		ex_embs, m_embs, logits = self(
@@ -83,23 +88,13 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			# [ex_count, m_count]
 			labels = batch['labels']
 
-			# [ex_count, m_count]
-			# logits
-
-			# -sum_i(x[i])
-			# +
-			# num_positive * log(sum_j(exp(x[j])))
-			labels_mask = labels.float()
-			# [ex_count, m_count]
-			pos_logits = logits * labels_mask
-
 			# axis 1: each example over different misinfo
 			# [ex_count, 1]
-			m_loss, m_correct, m_total, m_accuracy = self._dim_loss(logits, pos_logits, labels_mask, dim=1)
+			m_loss, m_correct, m_total, m_accuracy = self._dim_loss(logits, labels, dim=1)
 
 			# axis 0: each misinfo over different examples
 			# [1, m_count]
-			ex_loss, ex_correct, ex_total, ex_accuracy = self._dim_loss(logits, pos_logits, labels_mask, dim=0)
+			ex_loss, ex_correct, ex_total, ex_accuracy = self._dim_loss(logits, labels, dim=0)
 
 			# [ex_count, m_count]
 			loss = (m_loss + ex_loss) / 2
@@ -116,8 +111,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 	def training_step(self, batch, batch_nb):
 		loss, logits, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
-
-		loss = loss.mean()
+		loss = loss.sum() / total_count
 		self.log('train_loss', loss)
 		self.log('train_accuracy', accuracy)
 		result = {
@@ -134,9 +128,9 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 	def _eval_step(self, batch, batch_nb, name):
 		if not self.predict_mode:
 			loss, logits, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
-
+			avg_loss = loss.sum() / total_count
 			result = {
-				f'{name}_loss': loss.mean(),
+				f'{name}_loss': avg_loss,
 				f'{name}_batch_loss': loss,
 				f'{name}_batch_accuracy': accuracy,
 				f'{name}_correct_count': correct_count,
@@ -229,10 +223,11 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			# for metric, value in max_metrics.items():
 			# 	self.log(metric, value)
 
-			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0).mean()
+			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0)
 			correct_count = torch.stack([x[f'{name}_correct_count'] for x in outputs], dim=0).sum()
 			total_count = sum([x[f'{name}_total_count'] for x in outputs])
 			accuracy = correct_count / total_count
+			loss = loss.sum() / total_count
 			self.log(f'{name}_loss', loss)
 			self.log(f'{name}_accuracy', accuracy)
 
