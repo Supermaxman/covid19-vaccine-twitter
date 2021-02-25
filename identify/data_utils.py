@@ -321,14 +321,14 @@ class MisinfoDataset(Dataset):
 			m_pos_labels = set()
 			m_neg_labels = set()
 			for m_id, m_label in doc['misinfo'].items():
-				self.num_labels[m_label] += 1
-				self.num_classes[m_id] += 1
 				m_label = label_text_to_relevant_id(m_label)
 				labels[m_id] = m_label
 				if m_label > 0:
 					m_pos_labels.add(m_id)
 				else:
 					m_neg_labels.add(m_id)
+				self.num_labels[m_label] += 1
+				self.num_classes[m_id] += 1
 
 			ex = {
 				'id': tweet_id,
