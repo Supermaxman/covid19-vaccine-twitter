@@ -60,7 +60,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		pos_scores = (logits + ((1.0 - labels_mask) * -1e9))
 		neg_scores = (logits + (labels_mask * -1e9))
 		# [ex_count, 1]
-		neg_scores = neg_scores.max(dim=dim, keepdim=True)
+		neg_scores = neg_scores.max(dim=dim, keepdim=True)[0]
 		# [1]
 		pos_correct_count = pos_scores.gt(neg_scores).float().sum(dim=dim).sum()
 		# [1]
