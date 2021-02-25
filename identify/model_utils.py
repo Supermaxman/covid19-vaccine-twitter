@@ -268,7 +268,6 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		return optimizer_params
 
 
-
 class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 	def __init__(
 			self, emb_size, *args, **kwargs
