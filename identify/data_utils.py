@@ -222,10 +222,12 @@ def get_token_features(token):
 
 
 class MisinfoBatchSampler(Sampler):
-	def __init__(self, dataset, pos_count: int, neg_count: int = 0):
+	def __init__(self, dataset, pos_count: int, neg_count: int = 0, epoch_shuffle=True, seed=0):
 		super().__init__(dataset)
 		self.dataset = dataset
 		self.generator = None
+		self.epoch_shuffle = epoch_shuffle
+		self.seed = seed
 		self.m_pos_examples = defaultdict(list)
 		self.m_neg_examples = defaultdict(list)
 		self.m_ids = {}
@@ -246,27 +248,29 @@ class MisinfoBatchSampler(Sampler):
 		self.pos_count = pos_count
 		self.neg_count = neg_count
 		self.batch_size = self.pos_count + self.neg_count
+		self.pos_count = sum([len(x) for x in self.m_pos_examples.values()])
+		self.neg_count = sum([len(x) for x in self.m_neg_examples.values()])
 
 	def __iter__(self):
-		if self.generator is None:
-			generator = torch.Generator()
-			generator.manual_seed(int(torch.empty((), dtype=torch.int64).random_().item()))
-		else:
-			generator = self.generator
+		# create new generator if this is the first time, otherwise re-create same generator with same seed
+		# every time if we do not want to shuffle every epoch.
+		if self.generator is None or not self.epoch_shuffle:
+			self.generator = torch.Generator()
+			self.generator.manual_seed(self.seed)
 
 		batch = []
-		num_batches = len(self.dataset) // self.batch_size
+		num_batches = self.pos_count // self.batch_size
 		for b_idx in range(num_batches):
-			m_idxs = self.sample_misinfo(self.pos_count, generator)
+			m_idxs = self.sample_misinfo(self.pos_count, self.generator)
 			for m_idx in m_idxs:
 				m_id = self.m_idxs[m_idx]
-				ex_idx = self.sample_positive(m_id, generator)
+				ex_idx = self.sample_positive(m_id, self.generator)
 				batch.append(ex_idx)
 			yield batch
 			batch = []
 
 	def __len__(self):
-		return len(self.dataset) // self.batch_size
+		return self.pos_count // self.batch_size
 
 	def sample_misinfo(self, m_count, generator):
 		m_s_indices = torch.randperm(
