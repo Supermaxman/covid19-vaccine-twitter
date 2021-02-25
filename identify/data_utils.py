@@ -222,7 +222,7 @@ def get_token_features(token):
 	return token_data
 
 
-class MisinfoBatchSampler(Sampler):
+class MisinfoBatchSampler:
 	def __init__(self, dataset, pos_count: int, neg_count: int = 0):
 		super().__init__(dataset)
 		self.dataset = dataset
