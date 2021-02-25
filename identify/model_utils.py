@@ -278,7 +278,8 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 			self.emb_size
 		)
 		# initialized value to exp(x) = 0.07
-		self.temperature = Parameter(torch.log(torch.ones(1, dtype=torch.float) * 0.07))
+		# self.temperature = Parameter(torch.log(torch.ones(1, dtype=torch.float) * 0.07))
+		self.temperature = Parameter(torch.log(torch.ones(1, dtype=torch.float) / 0.07))
 		self.batch_log['temperature'] = self.temperature
 
 	def forward(self, input_ids, attention_mask, token_type_ids, batch):
@@ -306,8 +307,8 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		# -1 to 1
 		scores = torch.matmul(ex_embs, m_embs.t())
 		# [bsize, emb_size] x [emb_size, num_misinfo] -> [bsize, num_misinfo]
-		# logits = scores * torch.clamp(torch.exp(self.temperature), min=-100.0, max=100.0)
-		logits = scores / torch.exp(self.temperature)
+		logits = scores * torch.clamp(torch.exp(self.temperature), min=-100.0, max=100.0)
+		# logits = scores / torch.exp(self.temperature)
 		return ex_embs, m_embs, logits, scores
 
 
