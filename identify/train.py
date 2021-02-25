@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import loggers as pl_loggers
 
 from model_utils import *
-from data_utils import MisinfoDataset, MisinfoBatchCollator, read_jsonl
+from data_utils import MisinfoBatchSampler, MisinfoDataset, MisinfoBatchCollator, read_jsonl
 
 import torch
 
@@ -35,7 +35,6 @@ if __name__ == '__main__':
 	parser.add_argument('-mip', '--misinfo_path', default=None)
 	parser.add_argument('-mt', '--model_type', default='lm')
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
-	parser.add_argument('-wf', '--weight_factor', default=1.0, type=float)
 	parser.add_argument('-wd', '--weight_decay', default=0.0, type=float)
 	parser.add_argument('-gcv', '--gradient_clip_val', default=1.0, type=float)
 	parser.add_argument('-th', '--threshold', default=None, type=float)
@@ -102,9 +101,12 @@ if __name__ == '__main__':
 
 	train_data_loader = DataLoader(
 		train_dataset,
-		batch_size=args.batch_size,
-		shuffle=True,
 		num_workers=num_workers,
+		batch_sampler=MisinfoBatchSampler(
+			dataset=train_dataset,
+			pos_count=args.batch_size,
+			neg_count=0
+		),
 		collate_fn=MisinfoBatchCollator(
 			args.max_seq_len,
 			args.use_tpus,
@@ -114,9 +116,12 @@ if __name__ == '__main__':
 	)
 	val_data_loader = DataLoader(
 		val_dataset,
-		batch_size=args.batch_size,
-		shuffle=False,
 		num_workers=num_workers,
+		batch_sampler=MisinfoBatchSampler(
+			dataset=val_dataset,
+			pos_count=args.batch_size,
+			neg_count=0
+		),
 		collate_fn=MisinfoBatchCollator(
 			args.max_seq_len,
 			args.use_tpus,
@@ -161,7 +166,6 @@ if __name__ == '__main__':
 			lr_warmup=0.1,
 			updates_total=updates_total,
 			weight_decay=args.weight_decay,
-			weight_factor=args.weight_factor,
 			threshold=args.threshold,
 			torch_cache_dir=args.torch_cache_dir,
 			load_pretrained=args.load_checkpoint is not None,

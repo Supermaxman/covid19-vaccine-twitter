@@ -2,8 +2,11 @@
 import json
 import os
 import json
+from typing import Iterator
+
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Sampler
+from torch.utils.data.sampler import T_co
 from tqdm import tqdm
 import random
 from collections import defaultdict
@@ -219,6 +222,83 @@ def get_token_features(token):
 	return token_data
 
 
+class MisinfoBatchSampler(Sampler):
+	def __init__(self, dataset, pos_count: int, neg_count: int = 0):
+		super().__init__(dataset)
+		self.dataset = dataset
+		self.generator = None
+		self.m_pos_examples = defaultdict(list)
+		self.m_neg_examples = defaultdict(list)
+		self.m_ids = {}
+		for ex_idx in range(len(dataset)):
+			ex = dataset[ex_idx]
+			for m_id in ex['pos_m_ids']:
+				self.m_pos_examples[m_id].append(ex_idx)
+				if m_id not in self.m_ids:
+					self.m_ids[m_id] = len(self.m_ids)
+			for m_id in ex['neg_m_ids']:
+				self.m_neg_examples[m_id].append(ex_idx)
+				if m_id not in self.m_ids:
+					self.m_ids[m_id] = len(self.m_ids)
+
+		assert pos_count <= len(self.m_ids)
+		self.m_ids_list = list(self.m_ids.keys())
+		self.m_idxs = {m_idx: m_id for m_id, m_idx in self.m_ids.items()}
+		self.pos_count = pos_count
+		self.neg_count = neg_count
+		self.batch_size = self.pos_count + self.neg_count
+
+	def __iter__(self):
+		if self.generator is None:
+			generator = torch.Generator()
+			generator.manual_seed(int(torch.empty((), dtype=torch.int64).random_().item()))
+		else:
+			generator = self.generator
+
+		batch = []
+		num_batches = len(self.dataset) // self.batch_size
+		for b_idx in range(num_batches):
+			m_idxs = self.sample_misinfo(self.pos_count, generator)
+			for m_idx in m_idxs:
+				m_id = self.m_idxs[m_idx]
+				ex_idx = self.sample_positive(m_id, generator)
+				batch.append(ex_idx)
+			yield batch
+			batch = []
+
+	def __len__(self):
+		return len(self.dataset) // self.batch_size
+
+	def sample_misinfo(self, m_count, generator):
+		m_s_indices = torch.randperm(
+			n=len(self.m_ids),
+			generator=generator
+		).tolist()[:m_count]
+		return m_s_indices
+
+	def sample_positive(self, m_id, generator):
+		pos_examples = self.m_pos_examples[m_id]
+		s_idx = torch.randint(
+			high=len(pos_examples),
+			size=(1,),
+			dtype=torch.int64,
+			generator=generator
+		).tolist()[0]
+		ex_idx = pos_examples[s_idx]
+		return ex_idx
+
+	def sample_negative(self, m_id, generator):
+		neg_examples = self.m_neg_examples[m_id]
+		s_idx = torch.randint(
+			high=len(neg_examples),
+			size=(1,),
+			dtype=torch.int64,
+			generator=generator
+		).tolist()[0]
+		ex_idx = neg_examples[s_idx]
+		return ex_idx
+
+
 class MisinfoDataset(Dataset):
 	def __init__(
 			self,
@@ -239,10 +319,17 @@ class MisinfoDataset(Dataset):
 				tweet_text
 			)
 			labels = {}
+			m_pos_labels = set()
+			m_neg_labels = set()
 			for m_id, m_label in doc['misinfo'].items():
 				self.num_labels[m_label] += 1
 				self.num_classes[m_id] += 1
-				labels[m_id] = label_text_to_relevant_id(m_label)
+				m_label = label_text_to_relevant_id(m_label)
+				labels[m_id] = m_label
+				if m_label > 0:
+					m_pos_labels.add(m_id)
+				else:
+					m_neg_labels.add(m_id)
 
 			ex = {
 				'id': tweet_id,
@@ -250,7 +337,9 @@ class MisinfoDataset(Dataset):
 				'input_ids': token_data['input_ids'],
 				'token_type_ids': token_data['token_type_ids'],
 				'attention_mask': token_data['attention_mask'],
-				'labels': labels
+				'labels': labels,
+				'pos_m_ids': m_pos_labels,
+				'neg_m_ids': m_neg_labels,
 			}
 
 			self.examples.append(ex)
@@ -288,7 +377,6 @@ class MisinfoBatchCollator(object):
 
 	def __call__(self, examples):
 		ids = []
-		m_ids = []
 		# [labels..., tweets...]
 		pad_seq_len = 0
 
@@ -296,14 +384,12 @@ class MisinfoBatchCollator(object):
 			pad_seq_len = max(pad_seq_len, min(len(ex['input_ids']), self.max_seq_len))
 		# TODO if force_max_seq_len then m_idx_map should have all m_ids in it to maintain same batch size or mask
 		m_idx_map = {}
+		# m_idx_map = {m_id: m_idx for (m_idx, m_id) in enumerate(self.misinfo)}
 		for ex_idx, ex in enumerate(examples):
 			ids.append(ex['id'])
-			ex_m_ids = []
-			for m_id, m_label in ex['labels'].items():
+			for m_id in ex['m_pos_labels']:
 				if m_id not in m_idx_map:
 					m_idx_map[m_id] = len(m_idx_map)
-				ex_m_ids.append(m_id)
-			m_ids.append(ex_m_ids)
 
 		for m_id, m_idx in m_idx_map.items():
 			m = self.misinfo[m_id]
@@ -314,12 +400,26 @@ class MisinfoBatchCollator(object):
 		attention_mask = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 		token_type_ids = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 
-		labels = torch.zeros([len(examples), len(m_idx_map)], dtype=torch.float)
+		# [ex_count, m_count]
+		labels = torch.zeros([len(examples), len(m_idx_map)], dtype=torch.long)
 		if self.labeled:
 			for ex_idx, ex in enumerate(examples):
-				for m_id, m_label in ex['labels'].items():
+				for m_id in ex['m_pos_labels']:
 					m_idx = m_idx_map[m_id]
-					labels[ex_idx, m_idx] = m_label
+					labels[ex_idx, m_idx] = 1
+
+		# [1, m_count]
+		ex_pos_count = labels.eq(1).long().sum(dim=0, keepdim=True).float()
+
+		# [ex_count, 1]
+		m_pos_count = labels.eq(1).long().sum(dim=1, keepdim=True).float()
+
+		# [1, m_count]
+		ex_mask = (labels.eq(0).long()).sum(dim=0, keepdim=True).gt(0)
+		# [ex_count, 1]
+		m_mask = (labels.eq(0).long()).sum(dim=1, keepdim=True).gt(0)
+		# [ex_count, m_count]
+		loss_mask = torch.bitwise_and(ex_mask, m_mask).long()
 
 		for m_id, m_idx in m_idx_map.items():
 			m = self.misinfo[m_id]
@@ -335,13 +435,18 @@ class MisinfoBatchCollator(object):
 
 		batch = {
 			'id': ids,
-			'm_ids': m_ids,
+			'm_ids': list(m_idx_map.values()),
 			'num_misinfo': len(m_idx_map),
 			'num_examples': len(examples),
 			'input_ids': input_ids,
 			'attention_mask': attention_mask,
 			'token_type_ids': token_type_ids,
-			'labels': labels
+			'labels': labels,
+			'ex_pos_count': ex_pos_count,
+			'm_pos_count': m_pos_count,
+			'ex_mask': ex_mask,
+			'm_mask': m_mask,
+			'loss_mask': loss_mask
 		}
 
 		return batch
