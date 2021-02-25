@@ -78,7 +78,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		return loss, pos_correct_count, pos_total_count, accuracy
 
 	def _forward_step(self, batch, batch_nb):
-		ex_embs, m_embs, logits = self(
+		ex_embs, m_embs, logits, scores = self(
 			input_ids=batch['input_ids'],
 			attention_mask=batch['attention_mask'],
 			token_type_ids=batch['token_type_ids'],
@@ -105,12 +105,12 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			accuracy = correct_count / total_count
 			if accuracy.isnan().item():
 				accuracy = torch.zeros(1, dtype=torch.float)
-			return loss, logits, correct_count, total_count, accuracy
+			return loss, logits, scores, correct_count, total_count, accuracy
 		else:
 			return logits, ex_embs, m_embs
 
 	def training_step(self, batch, batch_nb):
-		loss, logits, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
+		loss, logits, scores, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
 		loss = loss.sum() / total_count
 		self.log('train_loss', loss)
 		self.log('train_accuracy', accuracy)
@@ -127,7 +127,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 	def _eval_step(self, batch, batch_nb, name):
 		if not self.predict_mode:
-			loss, logits, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
+			loss, logits, scores, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
 			avg_loss = loss.sum() / total_count
 			result = {
 				f'{name}_loss': avg_loss,
@@ -136,6 +136,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 				f'{name}_correct_count': correct_count,
 				f'{name}_total_count': total_count,
 				f'{name}_batch_logits': logits,
+				f'{name}_batch_scores': scores,
 				f'{name}_batch_labels': batch['labels'],
 			}
 
@@ -165,10 +166,8 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			return result
 
 	def _get_predictions(self, logits, threshold):
-		# TODO need to fix this for new approach
-		raise NotImplementedError()
-		pos_probs = self.score_func(logits)
-		predictions = (pos_probs.gt(threshold)).long()
+		# normalize over
+		predictions = (logits.gt(threshold)).long()
 		return predictions
 
 	def _get_metrics(self, logits, labels, threshold, name):
@@ -185,43 +184,37 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		i_recall = i_tp / torch.clamp(i_tp + i_fn, 1.0)
 
 		i_f1 = 2.0 * (i_precision * i_recall) / (torch.clamp(i_precision + i_recall, 1.0))
-		macro_f1 = i_f1
-		macro_p = i_precision
-		macro_r = i_recall
 		metrics[f'{name}_f1'] = i_f1
 		metrics[f'{name}_p'] = i_precision
 		metrics[f'{name}_r'] = i_recall
-
-		metrics[f'{name}_macro_f1'] = macro_f1
-		metrics[f'{name}_macro_p'] = macro_p
-		metrics[f'{name}_macro_r'] = macro_r
 		metrics[f'{name}_threshold'] = threshold
 		return metrics
 
 	def _eval_epoch_end(self, outputs, name):
 		if not self.predict_mode:
-			# logits = torch.cat([x[f'{name}_batch_logits'].flatten() for x in outputs], dim=0)
-			# labels = torch.cat([x[f'{name}_batch_labels'].flatten() for x in outputs], dim=0)
-			#
-			# if self.threshold is None:
-			# 	threshold_range = np.linspace(
-			# 		start=0.0,
-			# 		stop=1.0,
-			# 		num=100
-			# 	)
-			# else:
-			# 	threshold_range = [self.threshold]
-			# max_metric = float('-inf')
-			# max_metrics = {}
-			# for threshold in threshold_range:
-			# 	t_metrics = self._get_metrics(logits, labels, threshold, name)
-			# 	m = t_metrics[f'{name}_macro_f1']
-			# 	if m > max_metric:
-			# 		max_metric = m
-			# 		max_metrics = t_metrics
-			#
-			# for metric, value in max_metrics.items():
-			# 	self.log(metric, value)
+			scores = torch.cat([x[f'{name}_batch_scores'].flatten() for x in outputs], dim=0)
+			labels = torch.cat([x[f'{name}_batch_labels'].flatten() for x in outputs], dim=0)
+
+			if self.threshold is None:
+				# cosine similarities between -1 and 1
+				threshold_range = np.linspace(
+					start=-1.0,
+					stop=1.0,
+					num=200
+				)
+			else:
+				threshold_range = [self.threshold]
+			max_metric = float('-inf')
+			max_metrics = {}
+			for threshold in threshold_range:
+				t_metrics = self._get_metrics(scores, labels, threshold, name)
+				m = t_metrics[f'{name}_f1']
+				if m > max_metric:
+					max_metric = m
+					max_metrics = t_metrics
+
+			for metric, value in max_metrics.items():
+				self.log(metric, value)
 
 			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0)
 			correct_count = torch.stack([x[f'{name}_correct_count'] for x in outputs], dim=0).sum()
@@ -306,9 +299,11 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		m_features = cls_output[:num_misinfo]
 		# [num_misinfo, emb_size]
 		m_embs = F.normalize(self.m_embedding_layer(m_features), p=2, dim=-1)
+		# -1 to 1
+		scores = torch.matmul(ex_embs, m_embs.t())
 		# [bsize, emb_size] x [emb_size, num_misinfo] -> [bsize, num_misinfo]
-		logits = torch.matmul(ex_embs, m_embs.t()) * torch.clamp(torch.exp(self.temperature), min=-100.0, max=100.0)
-		return ex_embs, m_embs, logits
+		logits = scores * torch.clamp(torch.exp(self.temperature), min=-100.0, max=100.0)
+		return ex_embs, m_embs, logits, scores
 
 
 def get_device_id():
