@@ -231,11 +231,11 @@ class MisinfoBatchSampler(Sampler):
 		self.m_ids = {}
 		for ex_idx in range(len(dataset)):
 			ex = dataset[ex_idx]
-			for m_id in ex['pos_m_ids']:
+			for m_id in ex['m_pos_labels']:
 				self.m_pos_examples[m_id].append(ex_idx)
 				if m_id not in self.m_ids:
 					self.m_ids[m_id] = len(self.m_ids)
-			for m_id in ex['neg_m_ids']:
+			for m_id in ex['m_neg_labels']:
 				self.m_neg_examples[m_id].append(ex_idx)
 				if m_id not in self.m_ids:
 					self.m_ids[m_id] = len(self.m_ids)
@@ -337,8 +337,8 @@ class MisinfoDataset(Dataset):
 				'token_type_ids': token_data['token_type_ids'],
 				'attention_mask': token_data['attention_mask'],
 				'labels': labels,
-				'pos_m_ids': m_pos_labels,
-				'neg_m_ids': m_neg_labels,
+				'm_pos_labels': m_pos_labels,
+				'm_neg_labels': m_neg_labels,
 			}
 
 			self.examples.append(ex)
