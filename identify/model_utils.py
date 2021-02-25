@@ -44,6 +44,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			)
 			self.config = self.bert.config
 		self.save_hyperparameters()
+		self.batch_log = {}
 
 	def _dim_loss(self, logits, labels, dim):
 		labels_mask = labels.float()
@@ -114,6 +115,8 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		loss = loss.sum() / total_count
 		self.log('train_loss', loss)
 		self.log('train_accuracy', accuracy)
+		for log_name, log_value in self.batch_log.items():
+			self.log(f'train_{log_name}', log_value)
 		result = {
 			'loss': loss
 		}
@@ -276,6 +279,7 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		)
 		# initialized value to 0.07
 		self.temperature = Parameter(torch.ones(1, dtype=torch.float) * 0.07)
+		self.batch_log['temperature'] = self.temperature
 
 	def forward(self, input_ids, attention_mask, token_type_ids, batch):
 		# [num_misinfo + bsize, seq_len, hidden_size]
@@ -304,6 +308,7 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		# [bsize, emb_size] x [emb_size, num_misinfo] -> [bsize, num_misinfo]
 		logits = scores * torch.clamp(torch.exp(self.temperature), min=-100.0, max=100.0)
 		return ex_embs, m_embs, logits, scores
+
 
 
 def get_device_id():
