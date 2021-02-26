@@ -309,6 +309,8 @@ class MisinfoDataset(Dataset):
 			tokenizer,
 	):
 		self.examples = []
+		self.pos_examples = []
+		self.neg_examples = []
 		self.num_labels = defaultdict(int)
 		self.num_classes = defaultdict(int)
 
@@ -346,9 +348,14 @@ class MisinfoDataset(Dataset):
 			}
 
 			self.examples.append(ex)
+			if len(m_pos_labels) > 0:
+				self.pos_examples.append(ex)
+			if len(m_neg_labels) > 0:
+				self.neg_examples.append(ex)
 
 		random.shuffle(self.examples)
-		self.num_examples = len(self.examples)
+		random.shuffle(self.pos_examples)
+		random.shuffle(self.neg_examples)
 
 	def __len__(self):
 		return len(self.examples)
@@ -362,15 +369,35 @@ class MisinfoDataset(Dataset):
 		return example
 
 
-class MisinfoBatchCollator(object):
+class MisinfoPositiveDataset(MisinfoDataset):
 	def __init__(
-			self, max_seq_len: int, force_max_seq_len: bool, misinfo: dict, tokenizer,
-			labeled=True):
-		super().__init__()
+			self,
+			documents,
+			tokenizer,
+	):
+		super().__init__(documents, tokenizer)
+
+	def __len__(self):
+		return len(self.pos_examples)
+
+	def __getitem__(self, idx):
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
+
+		example = self.pos_examples[idx]
+
+		return example
+
+
+class MisinfoBatchCollator:
+	def __init__(
+			self, misinfo: dict, tokenizer, max_seq_len: int,
+			labeled=True, all_misinfo=False, force_max_seq_len=False):
 		self.max_seq_len = max_seq_len
 		self.force_max_seq_len = force_max_seq_len
 		# {m_id -> {title, text, alternate_text, source}}
 		self.misinfo = misinfo
+		self.all_misinfo = all_misinfo
 		self.tokenizer = tokenizer
 		for m_id, m in self.misinfo.items():
 			m['token_data'] = tokenizer(
@@ -378,78 +405,73 @@ class MisinfoBatchCollator(object):
 			)
 		self.labeled = labeled
 
+	def _calculate_seq_padding(self, examples, batch_misinfo):
+		if self.force_max_seq_len:
+			pad_seq_len = self.max_seq_len
+		else:
+			pad_seq_len = 0
+			for ex in examples:
+				pad_seq_len = max(pad_seq_len, min(len(ex['input_ids']), self.max_seq_len))
+
+			for m_id, m_idx in batch_misinfo.items():
+				m = self.misinfo[m_id]
+				pad_seq_len = max(pad_seq_len, min(len(m['token_data']['input_ids']), self.max_seq_len))
+
+		return pad_seq_len
+
+	def _build_batch_misinfo(self, examples):
+		# if force_max_seq_len then batch_misinfo should have all m_ids in it to maintain same shape
+		if self.all_misinfo or self.force_max_seq_len:
+			batch_misinfo = {m_id: m_idx for (m_idx, m_id) in enumerate(self.misinfo)}
+		else:
+			batch_misinfo = {}
+			for ex_idx, ex in enumerate(examples):
+				for m_id in ex['m_pos_labels']:
+					if m_id not in batch_misinfo:
+						batch_misinfo[m_id] = len(batch_misinfo)
+		return batch_misinfo
+
 	def __call__(self, examples):
-		ids = []
-		# [labels..., tweets...]
-		pad_seq_len = 0
+		batch_misinfo = self._build_batch_misinfo(examples)
 
-		for ex in examples:
-			pad_seq_len = max(pad_seq_len, min(len(ex['input_ids']), self.max_seq_len))
-		# TODO if force_max_seq_len then m_idx_map should have all m_ids in it to maintain same batch size or mask
-		m_idx_map = {}
-		# m_idx_map = {m_id: m_idx for (m_idx, m_id) in enumerate(self.misinfo)}
-		for ex_idx, ex in enumerate(examples):
-			ids.append(ex['id'])
-			for m_id in ex['m_pos_labels']:
-				if m_id not in m_idx_map:
-					m_idx_map[m_id] = len(m_idx_map)
+		pad_seq_len = self._calculate_seq_padding(examples, batch_misinfo)
 
-		for m_id, m_idx in m_idx_map.items():
-			m = self.misinfo[m_id]
-			pad_seq_len = max(pad_seq_len, min(len(m['token_data']['input_ids']), self.max_seq_len))
-
-		batch_size = len(m_idx_map) + len(examples)
+		batch_size = len(batch_misinfo) + len(examples)
 		input_ids = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 		attention_mask = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 		token_type_ids = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
 
 		# [ex_count, m_count]
-		labels = torch.zeros([len(examples), len(m_idx_map)], dtype=torch.long)
+		labels = torch.zeros([len(examples), len(batch_misinfo)], dtype=torch.long)
 		if self.labeled:
 			for ex_idx, ex in enumerate(examples):
 				for m_id in ex['m_pos_labels']:
-					m_idx = m_idx_map[m_id]
+					m_idx = batch_misinfo[m_id]
 					labels[ex_idx, m_idx] = 1
 
-		# [1, m_count]
-		ex_pos_count = labels.eq(1).long().sum(dim=0, keepdim=True).float()
-
-		# [ex_count, 1]
-		m_pos_count = labels.eq(1).long().sum(dim=1, keepdim=True).float()
-
-		# [1, m_count]
-		ex_mask = (labels.eq(0).long()).sum(dim=0, keepdim=True).gt(0)
-		# [ex_count, 1]
-		m_mask = (labels.eq(0).long()).sum(dim=1, keepdim=True).gt(0)
-		# [ex_count, m_count]
-		loss_mask = torch.bitwise_and(ex_mask, m_mask).long()
-
-		for m_id, m_idx in m_idx_map.items():
+		for m_id, m_idx in batch_misinfo.items():
 			m = self.misinfo[m_id]
 			self.pad_and_apply(m['token_data']['input_ids'], input_ids, m_idx)
 			self.pad_and_apply(m['token_data']['attention_mask'], attention_mask, m_idx)
 			self.pad_and_apply(m['token_data']['token_type_ids'], token_type_ids, m_idx)
 
+		ids = []
 		for ex_idx, ex in enumerate(examples):
-			b_idx = len(m_idx_map) + ex_idx
+			ids.append(ex['id'])
+			b_idx = len(batch_misinfo) + ex_idx
 			self.pad_and_apply(ex['input_ids'], input_ids, b_idx)
 			self.pad_and_apply(ex['attention_mask'], attention_mask, b_idx)
 			self.pad_and_apply(ex['token_type_ids'], token_type_ids, b_idx)
 
 		batch = {
 			'id': ids,
-			'm_ids': list(m_idx_map.values()),
-			'num_misinfo': len(m_idx_map),
+			'm_ids': list(batch_misinfo.keys()),
+			'num_misinfo': len(batch_misinfo),
 			'num_examples': len(examples),
 			'input_ids': input_ids,
 			'attention_mask': attention_mask,
 			'token_type_ids': token_type_ids,
 			'labels': labels,
-			'ex_pos_count': ex_pos_count,
-			'm_pos_count': m_pos_count,
-			'ex_mask': ex_mask,
-			'm_mask': m_mask,
-			'loss_mask': loss_mask
 		}
 
 		return batch
@@ -457,3 +479,5 @@ class MisinfoBatchCollator(object):
 	def pad_and_apply(self, id_list, id_tensor, ex_idx):
 		ex_ids = id_list[:self.max_seq_len]
 		id_tensor[ex_idx, :len(ex_ids)] = torch.tensor(ex_ids, dtype=torch.long)
+
+

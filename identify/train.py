@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import loggers as pl_loggers
 
 from model_utils import *
-from data_utils import MisinfoBatchSampler, MisinfoDataset, MisinfoBatchCollator, read_jsonl
+from data_utils import MisinfoBatchSampler, MisinfoDataset, MisinfoPositiveDataset, MisinfoBatchCollator, read_jsonl
 
 import torch
 
@@ -22,6 +22,7 @@ if __name__ == '__main__':
 	parser.add_argument('-mn', '--model_name', default='pt-biobert-base-msmarco')
 	parser.add_argument('-sd', '--save_directory', default='models')
 	parser.add_argument('-bs', '--batch_size', default=8, type=int)
+	parser.add_argument('-ebs', '--eval_batch_size', default=4, type=int)
 	parser.add_argument('-ml', '--max_seq_len', default=96, type=int)
 	parser.add_argument('-se', '--seed', default=0, type=int)
 	parser.add_argument('-eo', '--epochs', default=10, type=int)
@@ -31,6 +32,7 @@ if __name__ == '__main__':
 	parser.add_argument('-gpu', '--gpus', default='0')
 	parser.add_argument('-lt', '--load_checkpoint', default=None)
 	parser.add_argument('-ft', '--fine_tune', default=False, action='store_true')
+	parser.add_argument('-ts', '--train_sampling', default='none')
 	parser.add_argument('-mip', '--misinfo_path', default=None)
 	parser.add_argument('-mt', '--model_type', default='lm')
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
@@ -85,59 +87,76 @@ if __name__ == '__main__':
 
 		logging.info(f'Loaded misconception info.')
 	logging.info('Loading datasets...')
-	train_dataset = MisinfoDataset(
-		documents=train_data,
-		tokenizer=tokenizer
-	)
-	train_batch_sampler = MisinfoBatchSampler(
-		dataset=train_dataset,
-		pos_count=args.batch_size,
-		neg_count=0,
-		epoch_shuffle=True,
-		seed=args.seed
-	)
-
-	val_dataset = MisinfoDataset(
+	train_sampling = args.train_sampling.lower()
+	if train_sampling == 'positive':
+		train_dataset = MisinfoDataset(
+			documents=train_data,
+			tokenizer=tokenizer
+		)
+		train_batch_sampler = MisinfoBatchSampler(
+			dataset=train_dataset,
+			pos_count=args.batch_size,
+			neg_count=0,
+			epoch_shuffle=True,
+			seed=args.seed
+		)
+		train_data_loader = DataLoader(
+			train_dataset,
+			num_workers=num_workers,
+			batch_sampler=train_batch_sampler,
+			collate_fn=MisinfoBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+		train_size = (len(train_batch_sampler) * args.batch_size)
+	elif train_sampling == 'none':
+		train_dataset = MisinfoPositiveDataset(
+			documents=train_data,
+			tokenizer=tokenizer
+		)
+		train_data_loader = DataLoader(
+			train_dataset,
+			num_workers=num_workers,
+			batch_size=args.batch_size,
+			shuffle=True,
+			collate_fn=MisinfoBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+		train_size = len(train_dataset)
+	else:
+		raise ValueError(f'Unknown sampling: {train_sampling}')
+	val_dataset = MisinfoPositiveDataset(
 		documents=val_data,
 		tokenizer=tokenizer
 	)
-	val_batch_sampler = MisinfoBatchSampler(
-		dataset=val_dataset,
-		pos_count=args.batch_size,
-		neg_count=0,
-		epoch_shuffle=False,
-		seed=args.seed
-	)
 
 	logging.info(f'train_labels={train_dataset.num_labels}')
-	logging.info(f'train={len(train_batch_sampler) * args.batch_size}')
-	logging.info(f'val={len(val_batch_sampler) * args.batch_size}')
+	logging.info(f'train={train_size}')
+	logging.info(f'val={len(val_dataset)}')
 
-	train_data_loader = DataLoader(
-		train_dataset,
-		num_workers=num_workers,
-		batch_sampler=train_batch_sampler,
-		collate_fn=MisinfoBatchCollator(
-			args.max_seq_len,
-			args.use_tpus,
-			misinfo,
-			tokenizer
-		)
-	)
 	val_data_loader = DataLoader(
 		val_dataset,
 		num_workers=num_workers,
-		batch_sampler=val_batch_sampler,
+		shuffle=False,
+		batch_size=args.eval_batch_size,
 		collate_fn=MisinfoBatchCollator(
-			args.max_seq_len,
-			args.use_tpus,
 			misinfo,
-			tokenizer
+			tokenizer,
+			args.max_seq_len,
+			all_misinfo=True,
+			force_max_seq_len=args.use_tpus,
 		)
 	)
 
 	num_batches_per_step = (len(gpus) if not args.use_tpus else tpu_cores)
-	updates_epoch = (len(train_batch_sampler) * args.batch_size) // (args.batch_size * num_batches_per_step)
+	updates_epoch = train_size // (args.batch_size * num_batches_per_step)
 	updates_total = updates_epoch * args.epochs
 	logging.info('Loading model...')
 	model_type = args.model_type.lower()
