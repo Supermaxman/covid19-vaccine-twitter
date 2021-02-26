@@ -137,6 +137,7 @@ if __name__ == '__main__':
 		tokenizer=tokenizer
 	)
 
+	logging.info(f'train_sampling={train_sampling}')
 	logging.info(f'train_labels={train_dataset.num_labels}')
 	logging.info(f'train={train_size}')
 	logging.info(f'val={len(val_dataset)}')
