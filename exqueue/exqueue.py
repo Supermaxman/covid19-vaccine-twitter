@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
 	experiment = args.experiment
 	queue_path = os.path.expanduser(args.queue_path)
-	ex_id = base64.urlsafe_b64encode(experiment.encode('utf-8'))
+	ex_id = base64.urlsafe_b64encode(experiment.encode('utf-8')).decode('utf-8')
 	status = {
 		'status': 'submitted',
 		'timestamp': datetime.now().strftime(time_format),
