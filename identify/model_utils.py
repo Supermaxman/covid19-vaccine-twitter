@@ -203,10 +203,10 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 			if self.threshold is None:
 				# cosine similarities between -1 and 1
-				threshold_range = np.linspace(
+				threshold_range = np.arange(
 					start=-1.00,
 					stop=1.00,
-					num=40
+					step=0.05
 				)
 			else:
 				threshold_range = [self.threshold]
