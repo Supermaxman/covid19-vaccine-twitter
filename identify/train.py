@@ -33,6 +33,7 @@ if __name__ == '__main__':
 	parser.add_argument('-lt', '--load_checkpoint', default=None)
 	parser.add_argument('-ft', '--fine_tune', default=False, action='store_true')
 	parser.add_argument('-ts', '--train_sampling', default='none')
+	parser.add_argument('-ls', '--losses', default='compare_loss')
 	parser.add_argument('-mip', '--misinfo_path', default=None)
 	parser.add_argument('-mt', '--model_type', default='lm')
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
@@ -225,6 +226,7 @@ if __name__ == '__main__':
 		updates_total=updates_total,
 		weight_decay=args.weight_decay,
 		threshold=args.threshold,
+		losses=args.losses.split(','),
 		torch_cache_dir=args.torch_cache_dir,
 		load_pretrained=args.load_checkpoint is not None
 	)

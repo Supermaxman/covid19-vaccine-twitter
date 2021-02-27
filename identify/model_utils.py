@@ -15,7 +15,7 @@ import logging
 
 class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 	def __init__(
-			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, threshold=None,
+			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, losses, threshold=None,
 			torch_cache_dir=None, predict_mode=False, predict_path=None, load_pretrained=False
 	):
 		super().__init__()
@@ -25,6 +25,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		self.weight_decay = weight_decay
 		self.lr_warmup = lr_warmup
 		self.updates_total = updates_total
+		self.losses = losses
 		self.threshold = threshold
 		self.predict_mode = predict_mode
 		self.predict_path = predict_path
@@ -45,9 +46,9 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			self.config = self.bert.config
 		self.save_hyperparameters()
 		self.batch_log = {}
+		self.bce_metric = torch.nn.BCEWithLogitsLoss(reduction='none')
 
-	def _dim_loss(self, logits, labels, dim):
-		labels_mask = labels.float()
+	def _dim_loss(self, logits, labels_mask, dim):
 		# non-positive logits are -1e9
 		pos_logits = (logits + ((1.0 - labels_mask) * -1e9))
 		# non-negative logits are -1e9
@@ -63,18 +64,45 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		# [ex_count, m_count]
 		loss = pos_loss + norm_loss
 
-		# [ex_count, 1]
-		m_pos_count = labels_mask.sum(dim=dim, keepdim=True)
-		# [ex_count, 1]
-		neg_logits = neg_logits.max(dim=dim, keepdim=True)[0]
-		# [1]
-		pos_correct_count = pos_logits.gt(neg_logits).float().sum(dim=dim).sum()
-		# [1]
-		pos_total_count = m_pos_count.squeeze(dim=dim).sum()
+		return loss
 
-		accuracy = pos_correct_count / torch.clamp(pos_total_count, 1.0)
+	def _loss(self, logits, labels):
+		loss = None
+		labels_mask = labels.float()
+		if 'compare_loss' in self.losses:
+			# [1]
+			m_pos_count = labels_mask.sum()
 
-		return loss, pos_correct_count, pos_total_count, accuracy
+			# axis 1: each example over different misinfo
+			# [ex_count, 1]
+			m_loss = self._dim_loss(logits, labels_mask, dim=1)
+
+			# axis 0: each misinfo over different examples
+			# [1, m_count]
+			ex_loss = self._dim_loss(logits, labels_mask, dim=0)
+
+			c_loss = (m_loss + ex_loss) / 2
+			c_loss = torch.sum(c_loss) / torch.clip(m_pos_count, 1.0)
+
+			if loss is None:
+				loss = c_loss
+			else:
+				loss += c_loss
+
+		if 'binary_loss' in self.losses:
+			bce_loss = self.bce_metric(
+				logits,
+				labels_mask
+			)
+			# [ex_count * m_count]
+			bce_count = bce_loss.shape[0] * bce_loss.shape[1]
+			bce_loss = torch.sum(bce_loss) / torch.clip(bce_count, 1.0)
+			if loss is None:
+				loss = bce_loss
+			else:
+				loss += bce_loss
+
+		return loss
 
 	def _forward_step(self, batch, batch_nb):
 		ex_embs, m_embs, logits, scores = self(
@@ -87,31 +115,15 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			# [ex_count, m_count]
 			labels = batch['labels']
 
-			# axis 1: each example over different misinfo
-			# [ex_count, 1]
-			m_loss, m_correct, m_total, m_accuracy = self._dim_loss(logits, labels, dim=1)
+			loss = self._loss(logits, labels)
 
-			# axis 0: each misinfo over different examples
-			# [1, m_count]
-			ex_loss, ex_correct, ex_total, ex_accuracy = self._dim_loss(logits, labels, dim=0)
-
-			# [ex_count, m_count]
-			loss = (m_loss + ex_loss) / 2
-
-			# TODO add these metrics individually to track
-			correct_count = m_correct + ex_correct
-			total_count = m_total + ex_total
-			accuracy = correct_count / torch.clamp(total_count, 1.0)
-
-			return loss, logits, scores, correct_count, total_count, accuracy
+			return loss, logits, scores
 		else:
 			return logits, ex_embs, m_embs
 
 	def training_step(self, batch, batch_nb):
-		loss, logits, scores, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
-		loss = loss.sum() / torch.clamp(total_count, 1.0)
+		loss, logits, scores = self._forward_step(batch, batch_nb)
 		self.log('train_loss', loss)
-		self.log('train_accuracy', accuracy)
 		for log_name, log_value in self.batch_log.items():
 			self.log(f'train_{log_name}', log_value)
 		result = {
@@ -127,14 +139,10 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 	def _eval_step(self, batch, batch_nb, name):
 		if not self.predict_mode:
-			loss, logits, scores, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
-			avg_loss = loss.sum() / torch.clamp(total_count, 1.0)
+			loss, logits, scores = self._forward_step(batch, batch_nb)
 			result = {
-				f'{name}_loss': avg_loss,
+				f'{name}_loss': loss,
 				f'{name}_batch_loss': loss,
-				f'{name}_batch_accuracy': accuracy,
-				f'{name}_correct_count': correct_count,
-				f'{name}_total_count': total_count,
 				f'{name}_batch_logits': logits,
 				f'{name}_batch_scores': scores,
 				f'{name}_batch_labels': batch['labels'],
@@ -198,9 +206,9 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			if self.threshold is None:
 				# cosine similarities between -1 and 1
 				threshold_range = np.linspace(
-					start=-1.0,
-					stop=1.0,
-					num=200
+					start=-1.00,
+					stop=1.00,
+					num=40
 				)
 			else:
 				threshold_range = [self.threshold]
@@ -217,12 +225,8 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 				self.log(metric, value)
 
 			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0)
-			correct_count = torch.stack([x[f'{name}_correct_count'] for x in outputs], dim=0).sum()
-			total_count = sum([x[f'{name}_total_count'] for x in outputs])
-			accuracy = correct_count / torch.clamp(total_count, 1.0)
-			loss = loss.sum() / torch.clamp(total_count, 1.0)
+			loss = loss.mean()
 			self.log(f'{name}_loss', loss)
-			self.log(f'{name}_accuracy', accuracy)
 
 	def validation_epoch_end(self, outputs):
 		self._eval_epoch_end(outputs, 'val')
