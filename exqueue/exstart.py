@@ -118,7 +118,7 @@ if __name__ == '__main__':
 				for ts, ex in top_to_run:
 					p_id = min([p_id for p_id, p in processes.items() if p is None])
 					experiment = ex['experiment']
-					command = f'run_experiment.sh {experiment}'
+					command = f'exqueue/run_experiment.sh {experiment}'
 					process = subprocess.Popen(command.split())
 					processes[p_id] = process
 					update_status(
