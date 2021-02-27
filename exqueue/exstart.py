@@ -16,11 +16,11 @@ time_format = '%Y%m%d%H%M%S'
 def update_status(queue_path, ex, status, p_id=None):
 	file_path = os.path.join(queue_path, ex['ex_id'])
 	new_status = {
-		'current_status': status,
+		'status': status,
 		'timestamp': datetime.now().strftime(time_format),
 	}
 	ex['status_history'].insert(0, new_status)
-	ex['status'] = new_status
+	ex['current_status'] = new_status
 	ex['process_id'] = p_id
 	with open(file_path, 'w') as f:
 		json.dump(ex, f, indent=4)
