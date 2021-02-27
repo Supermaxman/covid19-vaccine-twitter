@@ -112,6 +112,25 @@ if __name__ == '__main__':
 			)
 		)
 		train_size = (len(train_batch_sampler) * args.batch_size)
+	elif train_sampling == 'all_misinfo':
+		train_dataset = MisinfoPositiveDataset(
+			documents=train_data,
+			tokenizer=tokenizer
+		)
+		train_data_loader = DataLoader(
+			train_dataset,
+			num_workers=num_workers,
+			batch_size=args.batch_size,
+			shuffle=True,
+			collate_fn=MisinfoBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				all_misinfo=True,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+		train_size = len(train_dataset)
 	elif train_sampling == 'none':
 		train_dataset = MisinfoPositiveDataset(
 			documents=train_data,
