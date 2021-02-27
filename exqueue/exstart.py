@@ -81,19 +81,6 @@ if __name__ == '__main__':
 				# 'completed': []
 			}
 
-			print(f'Submitted experiments:')
-			for ts, ex in ex_queue['submitted']:
-				print(f'\t{ex_format(ex)}')
-			print(f'----------------------')
-			print(f'Running experiments:')
-			for ts, ex in ex_queue['running']:
-				print(f'\t{ex_format(ex)}')
-			print(f'----------------------')
-			# print(f'Completed experiments:')
-			# for ts, ex in ex_queue['completed']:
-			# 	print(f'\t{ex_format(ex)}')
-			# print(f'----------------------')
-
 			num_available_processes = len(processes)
 			for ts, ex in ex_queue['running']:
 				p_id = ex['process_id']
