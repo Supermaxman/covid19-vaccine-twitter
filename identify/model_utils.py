@@ -72,9 +72,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		# [1]
 		pos_total_count = m_pos_count.squeeze(dim=dim).sum()
 
-		accuracy = pos_correct_count / pos_total_count
-		if accuracy.isnan().item():
-			accuracy = torch.zeros(1, dtype=torch.float)
+		accuracy = pos_correct_count / torch.clamp(pos_total_count, 1.0)
 
 		return loss, pos_correct_count, pos_total_count, accuracy
 
@@ -103,16 +101,15 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			# TODO add these metrics individually to track
 			correct_count = m_correct + ex_correct
 			total_count = m_total + ex_total
-			accuracy = correct_count / total_count
-			if accuracy.isnan().item():
-				accuracy = torch.zeros(1, dtype=torch.float)
+			accuracy = correct_count / torch.clamp(total_count, 1.0)
+
 			return loss, logits, scores, correct_count, total_count, accuracy
 		else:
 			return logits, ex_embs, m_embs
 
 	def training_step(self, batch, batch_nb):
 		loss, logits, scores, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
-		loss = loss.sum() / total_count
+		loss = loss.sum() / torch.clamp(total_count, 1.0)
 		self.log('train_loss', loss)
 		self.log('train_accuracy', accuracy)
 		for log_name, log_value in self.batch_log.items():
@@ -131,7 +128,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 	def _eval_step(self, batch, batch_nb, name):
 		if not self.predict_mode:
 			loss, logits, scores, correct_count, total_count, accuracy = self._forward_step(batch, batch_nb)
-			avg_loss = loss.sum() / total_count
+			avg_loss = loss.sum() / torch.clamp(total_count, 1.0)
 			result = {
 				f'{name}_loss': avg_loss,
 				f'{name}_batch_loss': loss,
@@ -222,8 +219,8 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0)
 			correct_count = torch.stack([x[f'{name}_correct_count'] for x in outputs], dim=0).sum()
 			total_count = sum([x[f'{name}_total_count'] for x in outputs])
-			accuracy = correct_count / total_count
-			loss = loss.sum() / total_count
+			accuracy = correct_count / torch.clamp(total_count, 1.0)
+			loss = loss.sum() / torch.clamp(total_count, 1.0)
 			self.log(f'{name}_loss', loss)
 			self.log(f'{name}_accuracy', accuracy)
 
