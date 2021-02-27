@@ -94,9 +94,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 				logits,
 				labels_mask
 			)
-			# [ex_count * m_count]
-			bce_count = bce_loss.shape[0] * bce_loss.shape[1]
-			bce_loss = torch.sum(bce_loss) / torch.clip(bce_count, 1.0)
+			bce_loss = torch.mean(bce_loss)
 			if loss is None:
 				loss = bce_loss
 			else:
