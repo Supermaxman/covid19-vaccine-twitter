@@ -291,17 +291,17 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		)
 		contextualized_embeddings = outputs[0]
 		# [num_misinfo + bsize, hidden_size]
-		cls_output = contextualized_embeddings[:, 0]
-		cls_output = self.f_dropout(cls_output)
+		lm_output = self._get_lm_output(contextualized_embeddings)
+		lm_output = self.f_dropout(lm_output)
 		num_misinfo = batch['num_misinfo']
 
 		# [bsize, hidden_size]
-		ex_features = cls_output[num_misinfo:]
+		ex_features = lm_output[num_misinfo:]
 		# [bsize, emb_size]
 		ex_embs = F.normalize(self.ex_embedding_layer(ex_features), p=2, dim=-1)
 
 		# [num_misinfo, hidden_size]
-		m_features = cls_output[:num_misinfo]
+		m_features = lm_output[:num_misinfo]
 		# [num_misinfo, emb_size]
 		m_embs = F.normalize(self.m_embedding_layer(m_features), p=2, dim=-1)
 		# -1 to 1
@@ -311,6 +311,24 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		# logits = scores / torch.exp(self.temperature)
 		return ex_embs, m_embs, logits, scores
 
+	def _get_lm_output(self, contextualized_embeddings):
+		# cls embedding is first seq embedding
+		# [b_size, seq_len, lm_size] -> [b_size, lm_size]
+		cls_output = contextualized_embeddings[:, 0]
+		return cls_output
+
+
+class CovidTwitterMisinfoAvgModel(CovidTwitterMisinfoModel):
+	def __init__(
+			self, *args, **kwargs
+	):
+		super().__init__(*args, **kwargs)
+
+	def _get_lm_output(self, contextualized_embeddings):
+		# mean over sequence
+		# [b_size, seq_len, lm_size] -> [b_size, lm_size]
+		avg_output = torch.mean(contextualized_embeddings, dim=1)
+		return avg_output
 
 
 def get_device_id():

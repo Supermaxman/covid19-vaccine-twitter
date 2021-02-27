@@ -216,22 +216,33 @@ if __name__ == '__main__':
 	num_batches_per_step = (len(gpus) if not args.use_tpus else tpu_cores)
 	updates_epoch = train_size // (args.batch_size * num_batches_per_step)
 	updates_total = updates_epoch * args.epochs
+
 	logging.info('Loading model...')
+	model_args = dict(
+		pre_model_name=args.pre_model_name,
+		learning_rate=args.learning_rate,
+		lr_warmup=0.1,
+		updates_total=updates_total,
+		weight_decay=args.weight_decay,
+		threshold=args.threshold,
+		torch_cache_dir=args.torch_cache_dir,
+		load_pretrained=args.load_checkpoint is not None
+	)
+
 	model_type = args.model_type.lower()
 	if model_type == 'lm':
 		model = CovidTwitterMisinfoModel(
-			pre_model_name=args.pre_model_name,
-			learning_rate=args.learning_rate,
-			lr_warmup=0.1,
-			updates_total=updates_total,
-			weight_decay=args.weight_decay,
-			threshold=args.threshold,
-			torch_cache_dir=args.torch_cache_dir,
-			load_pretrained=args.load_checkpoint is not None,
+			**model_args,
+			emb_size=args.emb_size
+		)
+	elif model_type == 'lm-avg':
+		model = CovidTwitterMisinfoAvgModel(
+			**model_args,
 			emb_size=args.emb_size
 		)
 	else:
 		raise ValueError(f'Unknown model type: {model_type}')
+
 	tokenizer.save_pretrained(save_directory)
 	model.config.save_pretrained(save_directory)
 	if args.load_checkpoint is not None:
