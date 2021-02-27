@@ -17,7 +17,7 @@ def ex_format(ex):
 	c_status = ex['current_status']
 	p_id = ex['process_id']
 	status = '[' + c_status['status'] + ']'
-	timestamp = c_status['timestamp']
+	timestamp = str(datetime.strptime(c_status['timestamp'], time_format))
 	experiment = ex['experiment']
 	ex_id = ex['ex_id']
 	return f'{status:<12} {timestamp:<20} {experiment} ({ex_id}) - {p_id}'
