@@ -392,12 +392,13 @@ class MisinfoPositiveDataset(MisinfoDataset):
 class MisinfoBatchCollator:
 	def __init__(
 			self, misinfo: dict, tokenizer, max_seq_len: int,
-			labeled=True, all_misinfo=False, force_max_seq_len=False):
+			labeled=True, all_misinfo=False, neg_misinfo=False, force_max_seq_len=False):
 		self.max_seq_len = max_seq_len
 		self.force_max_seq_len = force_max_seq_len
 		# {m_id -> {title, text, alternate_text, source}}
 		self.misinfo = misinfo
 		self.all_misinfo = all_misinfo
+		self.neg_misinfo = neg_misinfo
 		self.tokenizer = tokenizer
 		for m_id, m in self.misinfo.items():
 			m['token_data'] = tokenizer(
@@ -429,6 +430,11 @@ class MisinfoBatchCollator:
 				for m_id in ex['m_pos_labels']:
 					if m_id not in batch_misinfo:
 						batch_misinfo[m_id] = len(batch_misinfo)
+				# TODO consider adding m_neg_labels
+				if self.neg_misinfo:
+					for m_id in ex['m_neg_labels']:
+						if m_id not in batch_misinfo:
+							batch_misinfo[m_id] = len(batch_misinfo)
 		return batch_misinfo
 
 	def __call__(self, examples):

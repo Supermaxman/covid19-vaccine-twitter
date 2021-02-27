@@ -131,6 +131,44 @@ if __name__ == '__main__':
 			)
 		)
 		train_size = len(train_dataset)
+	elif train_sampling == 'neg_misinfo':
+		train_dataset = MisinfoPositiveDataset(
+			documents=train_data,
+			tokenizer=tokenizer
+		)
+		train_data_loader = DataLoader(
+			train_dataset,
+			num_workers=num_workers,
+			batch_size=args.batch_size,
+			shuffle=True,
+			collate_fn=MisinfoBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				neg_misinfo=True,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+		train_size = len(train_dataset)
+	elif train_sampling == 'negative':
+		train_dataset = MisinfoDataset(
+			documents=train_data,
+			tokenizer=tokenizer
+		)
+		train_data_loader = DataLoader(
+			train_dataset,
+			num_workers=num_workers,
+			batch_size=args.batch_size,
+			shuffle=True,
+			collate_fn=MisinfoBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				neg_misinfo=True,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+		train_size = len(train_dataset)
 	elif train_sampling == 'none':
 		train_dataset = MisinfoPositiveDataset(
 			documents=train_data,
@@ -151,7 +189,7 @@ if __name__ == '__main__':
 		train_size = len(train_dataset)
 	else:
 		raise ValueError(f'Unknown sampling: {train_sampling}')
-	val_dataset = MisinfoPositiveDataset(
+	val_dataset = MisinfoDataset(
 		documents=val_data,
 		tokenizer=tokenizer
 	)
