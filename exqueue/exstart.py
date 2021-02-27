@@ -15,7 +15,10 @@ time_format = '%Y%m%d%H%M%S'
 
 def update_status(queue_path, ex, status, p_id=None):
 	old_file_path = os.path.join(queue_path, ex['current_status']['status'], ex['ex_id'])
-	file_path = os.path.join(queue_path, status, ex['ex_id'])
+	status_path = os.path.join(queue_path, status)
+	if not os.path.exists(status_path):
+		os.mkdir(status_path)
+	file_path = os.path.join(status_path, ex['ex_id'])
 	new_status = {
 		'status': status,
 		'timestamp': datetime.now().strftime(time_format),
