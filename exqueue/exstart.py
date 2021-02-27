@@ -45,6 +45,10 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	queue_path = os.path.expanduser(args.queue_path)
+
+	if not os.path.exists(queue_path):
+		os.mkdir(queue_path)
+
 	max_experiments = args.max_experiments
 	refresh_seconds = args.refresh_seconds
 	processes = {p_id: None for p_id in range(max_experiments)}
