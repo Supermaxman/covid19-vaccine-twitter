@@ -17,6 +17,11 @@ if __name__ == '__main__':
 
 	experiment = args.experiment
 	queue_path = os.path.expanduser(args.queue_path)
+	if not os.path.exists(queue_path):
+		os.mkdir(queue_path)
+	submitted_path = os.path.join(queue_path, 'submitted')
+	if not os.path.exists(submitted_path):
+		os.mkdir(submitted_path)
 	ex_id = base64.urlsafe_b64encode(experiment.encode('utf-8')).decode('utf-8')
 	status = {
 		'status': 'submitted',
@@ -32,10 +37,7 @@ if __name__ == '__main__':
 	if not os.path.exists(experiment):
 		raise FileNotFoundError(f'Could not find experiment! {experiment}')
 
-	if not os.path.exists(queue_path):
-		os.mkdir(queue_path)
-
-	ex_queue_path = os.path.join(queue_path, ex_id)
+	ex_queue_path = os.path.join(submitted_path, ex_id)
 	with FileLock(os.path.join(queue_path, '.lock')):
 		if os.path.exists(ex_queue_path):
 			print(f'Experiment already added to queue!')

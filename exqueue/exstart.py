@@ -14,7 +14,8 @@ time_format = '%Y%m%d%H%M%S'
 
 
 def update_status(queue_path, ex, status, p_id=None):
-	file_path = os.path.join(queue_path, ex['ex_id'])
+	old_file_path = os.path.join(queue_path, ex['current_status']['status'], ex['ex_id'])
+	file_path = os.path.join(queue_path, status, ex['ex_id'])
 	new_status = {
 		'status': status,
 		'timestamp': datetime.now().strftime(time_format),
@@ -24,6 +25,7 @@ def update_status(queue_path, ex, status, p_id=None):
 	ex['process_id'] = p_id
 	with open(file_path, 'w') as f:
 		json.dump(ex, f, indent=4)
+	os.remove(old_file_path)
 
 
 def ex_format(ex):
@@ -34,6 +36,22 @@ def ex_format(ex):
 	experiment = ex['experiment']
 	ex_id = ex['ex_id']
 	return f'{timestamp} [{status}]{experiment} ({ex_id}) - {p_id}'
+
+
+def get_experiments(queue_path, status):
+	ex_list = []
+	status_path = os.path.join(queue_path, status)
+	if not os.path.exists(status_path):
+		os.mkdir(status_path)
+	for file in os.listdir(status_path):
+		file_path = os.path.join(status_path, file)
+		if os.path.isfile(file_path) and not file_path.endswith('.lock'):
+			with open(file_path, 'r') as f:
+				ex = json.load(f)
+			c_status = ex['current_status']
+			timestamp = datetime.strptime(c_status['timestamp'], time_format)
+			ex_list.append((timestamp, ex))
+	return ex_list
 
 
 if __name__ == '__main__':
@@ -55,23 +73,11 @@ if __name__ == '__main__':
 	while True:
 		with FileLock(os.path.join(queue_path, '.lock')):
 			ex_queue = {
-				'submitted': [],
-				'running': [],
-				'completed': []
+				'submitted': get_experiments(queue_path, 'submitted'),
+				'running': get_experiments(queue_path, 'running'),
+				# 'completed': []
 			}
-			for file in os.listdir(queue_path):
-				file_path = os.path.join(queue_path, file)
-				if os.path.isfile(file_path) and not file_path.endswith('.lock'):
-					with open(file_path, 'r') as f:
-						ex = json.load(f)
-					c_status = ex['current_status']
-					status = c_status['status']
-					timestamp = datetime.strptime(c_status['timestamp'], time_format)
-					ex_queue[status].append((timestamp, ex))
-			print(f'Processes:')
-			for p_id, p in processes.items():
-				print(f'\t{p_id}: {p}')
-			print(f'----------------------')
+
 			print(f'Submitted experiments:')
 			for ts, ex in ex_queue['submitted']:
 				print(f'\t{ex_format(ex)}')
@@ -80,10 +86,10 @@ if __name__ == '__main__':
 			for ts, ex in ex_queue['running']:
 				print(f'\t{ex_format(ex)}')
 			print(f'----------------------')
-			print(f'Completed experiments:')
-			for ts, ex in ex_queue['completed']:
-				print(f'\t{ex_format(ex)}')
-			print(f'----------------------')
+			# print(f'Completed experiments:')
+			# for ts, ex in ex_queue['completed']:
+			# 	print(f'\t{ex_format(ex)}')
+			# print(f'----------------------')
 
 			num_available_processes = len(processes)
 			for ts, ex in ex_queue['running']:
@@ -126,7 +132,6 @@ if __name__ == '__main__':
 						status='running',
 						p_id=p_id
 					)
-			print(f'Sleeping for {refresh_seconds} seconds...')
 		time.sleep(refresh_seconds)
 
 
