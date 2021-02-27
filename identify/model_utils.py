@@ -288,7 +288,7 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		)
 		contextualized_embeddings = outputs[0]
 		# [num_misinfo + bsize, hidden_size]
-		lm_output = self._get_lm_output(contextualized_embeddings)
+		lm_output = self._get_lm_output(contextualized_embeddings, attention_mask)
 		lm_output = self.f_dropout(lm_output)
 		num_misinfo = batch['num_misinfo']
 
@@ -308,7 +308,7 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		# logits = scores / torch.exp(self.temperature)
 		return ex_embs, m_embs, logits, scores
 
-	def _get_lm_output(self, contextualized_embeddings):
+	def _get_lm_output(self, contextualized_embeddings, attention_mask):
 		# cls embedding is first seq embedding
 		# [b_size, seq_len, lm_size] -> [b_size, lm_size]
 		cls_output = contextualized_embeddings[:, 0]
@@ -321,10 +321,12 @@ class CovidTwitterMisinfoAvgModel(CovidTwitterMisinfoModel):
 	):
 		super().__init__(*args, **kwargs)
 
-	def _get_lm_output(self, contextualized_embeddings):
-		# mean over sequence
-		# [b_size, seq_len, lm_size] -> [b_size, lm_size]
-		avg_output = torch.mean(contextualized_embeddings, dim=1)
+	def _get_lm_output(self, contextualized_embeddings, attention_mask):
+		# mean over sequence considering mask
+		# [b_size, seq_len] -> [b_size, 1]
+		seq_count = torch.sum(attention_mask.float(), dim=1, keepdim=True)
+		# [b_size, seq_len, lm_size] -> [b_size, lm_size] / [b_size, 1] -> [b_size, lm_size]
+		avg_output = torch.sum(contextualized_embeddings, dim=1) / seq_count
 		return avg_output
 
 
