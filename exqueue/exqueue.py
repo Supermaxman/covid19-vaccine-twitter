@@ -40,7 +40,7 @@ if __name__ == '__main__':
 		if os.path.exists(ex_queue_path):
 			print(f'Experiment already added to queue!')
 		else:
-			with open(ex_queue_path) as f:
+			with open(ex_queue_path, 'w') as f:
 				json.dump(ex, f, indent=4)
 			print(f'Experiment successfully added to queue.')
 
