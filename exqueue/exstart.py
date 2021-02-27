@@ -69,6 +69,10 @@ if __name__ == '__main__':
 					status = c_status['status']
 					timestamp = datetime.strptime(c_status['timestamp'], time_format)
 					ex_queue[status].append((timestamp, ex))
+			print(f'Processes:')
+			for p_id, p in processes.items():
+				print(f'\t{p_id}: {p}')
+			print(f'----------------------')
 			print(f'Submitted experiments:')
 			for ts, ex in ex_queue['submitted']:
 				print(f'\t{ex_format(ex)}')
@@ -124,7 +128,7 @@ if __name__ == '__main__':
 						p_id=p_id
 					)
 			print(f'Sleeping for {refresh_seconds} seconds...')
-			time.sleep(refresh_seconds)
+		time.sleep(refresh_seconds)
 
 
 
