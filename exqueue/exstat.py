@@ -16,11 +16,11 @@ time_format = '%Y%m%d%H%M%S'
 def ex_format(ex):
 	c_status = ex['current_status']
 	p_id = ex['process_id']
-	status = c_status['status']
+	status = '[' + c_status['status'] + ']'
 	timestamp = datetime.strptime(c_status['timestamp'], time_format)
 	experiment = ex['experiment']
 	ex_id = ex['ex_id']
-	return f'[{status}] {experiment} {timestamp} ({ex_id}) - {p_id}'
+	return f'{status:<12} {timestamp:<20} {experiment} ({ex_id}) - {p_id}'
 
 
 def get_experiments(queue_path, status):
