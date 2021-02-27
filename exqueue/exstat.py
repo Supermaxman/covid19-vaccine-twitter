@@ -51,19 +51,14 @@ if __name__ == '__main__':
 		os.mkdir(queue_path)
 
 	with FileLock(os.path.join(queue_path, '.lock')):
-		ex_queue = {
-			'submitted': get_experiments(queue_path, 'submitted'),
-			'running': get_experiments(queue_path, 'running'),
-			'completed': get_experiments(queue_path, 'running')
-		}
 
-		for ts, ex in sorted(ex_queue['running'], key=lambda x: x[0], reverse=True):
+		for ts, ex in sorted(get_experiments(queue_path, 'running'), key=lambda x: x[0], reverse=True):
 			print(f'{ex_format(ex)}')
 		print(f'--------------------------')
-		for ts, ex in sorted(ex_queue['submitted'], key=lambda x: x[0], reverse=True):
+		for ts, ex in sorted(get_experiments(queue_path, 'submitted'), key=lambda x: x[0], reverse=True):
 			print(f'{ex_format(ex)}')
 		print(f'--------------------------')
-		for ts, ex in sorted(ex_queue['completed'], key=lambda x: x[0], reverse=True):
+		for ts, ex in sorted(get_experiments(queue_path, 'completed'), key=lambda x: x[0], reverse=True):
 			print(f'\t{ex_format(ex)}')
 
 
