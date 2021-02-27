@@ -55,7 +55,7 @@ if __name__ == '__main__':
 		for ts, ex in sorted(get_experiments(queue_path, 'running'), key=lambda x: x[0], reverse=True):
 			print(f'{ex_format(ex)}')
 		print()
-		for ts, ex in sorted(get_experiments(queue_path, 'submitted'), key=lambda x: x[0], reverse=True):
+		for ts, ex in sorted(get_experiments(queue_path, 'submitted'), key=lambda x: x[0], reverse=False):
 			print(f'{ex_format(ex)}')
 		print()
 		for ts, ex in sorted(get_experiments(queue_path, 'completed'), key=lambda x: x[0], reverse=True):
