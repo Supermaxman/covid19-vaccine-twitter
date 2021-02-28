@@ -43,6 +43,7 @@ if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-qp', '--queue_path', default='~/.default_queue')
+	parser.add_argument('-c', '--completed', default=False, action='store_true')
 	args = parser.parse_args()
 
 	queue_path = os.path.expanduser(args.queue_path)
@@ -56,8 +57,9 @@ if __name__ == '__main__':
 			print(f'{ex_format(ex)}')
 		for ts, ex in sorted(get_experiments(queue_path, 'submitted'), key=lambda x: x[0], reverse=False):
 			print(f'{ex_format(ex)}')
-		for ts, ex in sorted(get_experiments(queue_path, 'completed'), key=lambda x: x[0], reverse=True):
-			print(f'{ex_format(ex)}')
+		if args.completed:
+			for ts, ex in sorted(get_experiments(queue_path, 'completed'), key=lambda x: x[0], reverse=True):
+				print(f'{ex_format(ex)}')
 
 
 
