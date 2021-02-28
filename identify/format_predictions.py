@@ -11,7 +11,7 @@ def load_predictions(input_path):
 		if file_name.endswith('.pt'):
 			preds = torch.load(os.path.join(input_path, file_name))
 			pred_list.extend(preds)
-	m_scores = defaultdict(lambda: dict)
+	m_scores = defaultdict(dict)
 	for prediction in pred_list:
 		t_id = prediction['id']
 		m_id = prediction['m_id']
