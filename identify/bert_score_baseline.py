@@ -10,17 +10,20 @@ from metric_utils import compute_threshold_f1
 from data_utils import read_jsonl, label_text_to_relevant_id
 
 
-def create_dataset(tweets, misinfo, tweet_scores):
+def create_dataset(tweets, misinfo, tweet_scores, tweet_alt_scores):
 	scores = torch.zeros([len(tweets), len(misinfo)], dtype=torch.float)
 	labels = torch.zeros([len(tweets), len(misinfo)], dtype=torch.long)
 	m_map = {m_id: m_idx for (m_idx, m_id) in enumerate(misinfo.keys())}
 	for t_idx, t in enumerate(tweets):
-		t_scores = tweet_scores[t['id']]
+		tweet_id = t['id']
+		t_scores = tweet_scores[tweet_id]
+		t_alt_scores = tweet_alt_scores[tweet_id]
 		for m_id, m_label in t['misinfo'].items():
 			m_label = label_text_to_relevant_id(m_label)
 			m_score = t_scores[m_id]
+			m_alt_score = t_alt_scores[m_id]
 			labels[t_idx, m_map[m_id]] = m_label
-			scores[t_idx, m_map[m_id]] = m_score
+			scores[t_idx, m_map[m_id]] = max(m_score, m_alt_score)
 	return labels, scores
 
 
@@ -28,7 +31,9 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-tp', '--train_path', required=True)
 	parser.add_argument('-vp', '--val_path', required=True)
-	parser.add_argument('-sp', '--score_path', required=True)
+
+	parser.add_argument('-sp', '--score_path', default='data/scores.json')
+	parser.add_argument('-asp', '--alt_scores_path', default='data/alternate-scores.json')
 	parser.add_argument('-sd', '--save_directory', default='models')
 	parser.add_argument('-mn', '--model_name', default='covid-twitter-v2-bertscore')
 	parser.add_argument('-mip', '--misinfo_path', default=None)
@@ -63,6 +68,8 @@ if __name__ == '__main__':
 	logging.info(f'Loading bertscore scores: {args.score_path}')
 	with open(args.score_path, 'r') as f:
 		scores = json.load(f)
+	with open(args.alt_scores_path, 'r') as f:
+		alt_scores = json.load(f)
 
 	logging.info(f'Loading train dataset: {args.train_path}')
 	train_data = read_jsonl(args.train_path)
@@ -70,7 +77,7 @@ if __name__ == '__main__':
 	val_data = read_jsonl(args.val_path)
 
 	logging.info(f'Calculating training threshold...')
-	t_labels, t_scores = create_dataset(train_data, misinfo, scores)
+	t_labels, t_scores = create_dataset(train_data, misinfo, scores, alt_scores)
 	_, _, _, threshold = compute_threshold_f1(
 		scores=t_scores,
 		labels=t_labels,
@@ -80,7 +87,7 @@ if __name__ == '__main__':
 	)
 
 	logging.info(f'Predicting on val data...')
-	v_labels, v_scores = create_dataset(val_data, misinfo, scores)
+	v_labels, v_scores = create_dataset(val_data, misinfo, scores, alt_scores)
 	f1, p, r, _ = compute_threshold_f1(
 		scores=v_scores,
 		labels=v_labels,
