@@ -76,6 +76,8 @@ if __name__ == '__main__':
 	if threshold is None:
 		logging.info(f'Calculating training threshold...')
 		t_labels, t_scores, t_missing = create_dataset(train_data, misinfo, scores)
+		print(t_labels[:10])
+		print(t_scores[:10])
 		logging.info(f'Missing training tweet scores: {t_missing}')
 
 		t_f1, t_p, t_r, threshold = compute_threshold_f1(
