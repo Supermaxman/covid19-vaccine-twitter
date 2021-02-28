@@ -19,31 +19,21 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	with open(args.query_path) as f:
-		misinfo = json.load(f)
+		tweets = json.load(f)
 
 	searcher = SimpleSearcher(args.index_path)
 	searcher.set_bm25(args.bm25_k1, args.bm25_b)
 	print(f'Running search...')
 
 	scores = {}
-	for m_id, m in tqdm(misinfo.items()):
-		hits = searcher.search(m['text'], k=args.top_k)
+	for t in tqdm(tweets):
+		t_id = t['id']
+		t_text = t['full_text']
+		scores[t_id] = {}
+		hits = searcher.search(t_text, k=args.top_k)
 		for rank, hit in enumerate(hits[:args.top_k], start=1):
-			tweet_id = hit.docid
-			if tweet_id not in scores:
-				scores[tweet_id] = {}
-			scores[tweet_id][m_id] = hit.score
-
-		hits = searcher.search(m['alternate_text'], k=args.top_k)
-		for rank, hit in enumerate(hits[:args.top_k], start=1):
-			tweet_id = hit.docid
-			if tweet_id not in scores:
-				scores[tweet_id] = {}
-			score = hit.score
-			if m_id in scores[tweet_id]:
-				# not really proper way to compare bm25 scores, but should be ok for such similar queries for now
-				score = max(scores[tweet_id][m_id], score)
-			scores[tweet_id][m_id] = score
+			m_id = hit.docid
+			scores[t_id][m_id] = hit.score
 
 	with open(args.output_path, 'w') as f:
 		json.dump(scores, f)

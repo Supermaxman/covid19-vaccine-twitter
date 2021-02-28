@@ -36,7 +36,8 @@ if __name__ == '__main__':
 	parser.add_argument('-tp', '--train_path', required=True)
 	parser.add_argument('-vp', '--val_path', required=True)
 
-	parser.add_argument('-sp', '--score_path', default='data/scores.json')
+	parser.add_argument('-tsp', '--train_score_path', default='data/scores.json')
+	parser.add_argument('-vsp', '--val_score_path', default='data/scores.json')
 	parser.add_argument('-sd', '--save_directory', default='models')
 	parser.add_argument('-mn', '--model_name', default='covid-twitter-v2-bertscore')
 	parser.add_argument('-mip', '--misinfo_path', default=None)
@@ -66,9 +67,13 @@ if __name__ == '__main__':
 	with open(args.misinfo_path, 'r') as f:
 		misinfo = json.load(f)
 
-	logging.info(f'Loading bertscore scores: {args.score_path}')
-	with open(args.score_path, 'r') as f:
-		scores = json.load(f)
+	logging.info(f'Loading train bertscore scores: {args.train_score_path}')
+	with open(args.train_score_path, 'r') as f:
+		train_scores = json.load(f)
+
+	logging.info(f'Loading val bertscore scores: {args.val_score_path}')
+	with open(args.val_score_path, 'r') as f:
+		val_scores = json.load(f)
 
 	logging.info(f'Loading train dataset: {args.train_path}')
 	train_data = read_jsonl(args.train_path)
@@ -78,7 +83,7 @@ if __name__ == '__main__':
 	threshold = args.threshold
 	if threshold is None:
 		logging.info(f'Calculating training threshold...')
-		t_labels, t_scores, t_missing = create_dataset(train_data, misinfo, scores)
+		t_labels, t_scores, t_missing = create_dataset(train_data, misinfo, train_scores)
 		print(t_labels[:10])
 		print(t_scores[:10])
 		logging.info(f'Missing training tweet scores: {t_missing}')
@@ -93,7 +98,7 @@ if __name__ == '__main__':
 		print(f'F1: {t_f1:.4f}, P: {t_p:.4f}, R: {t_r:.4f}, T: {threshold:.2f}')
 
 	logging.info(f'Predicting on val data...')
-	v_labels, v_scores, v_missing = create_dataset(val_data, misinfo, scores)
+	v_labels, v_scores, v_missing = create_dataset(val_data, misinfo, val_scores)
 	logging.info(f'Missing val tweet scores: {v_missing}')
 	f1, p, r, _ = compute_threshold_f1(
 		scores=v_scores,
