@@ -152,6 +152,11 @@ if __name__ == '__main__':
 		model = CovidTwitterPairwiseMisinfoModel(
 			**model_args
 		)
+	elif model_type == 'lm-static':
+		model = CovidTwitterStaticMisinfoModel(
+			**model_args,
+			num_misinfo=len(misinfo)
+		)
 	else:
 		raise ValueError(f'Unknown model type: {model_type}')
 
