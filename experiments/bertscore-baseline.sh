@@ -24,7 +24,7 @@ python preprocess/run_bert_score.py \
     --device cuda:0 \
     --batch_size 32
 
-python identify/score_baseline.py \
+python identify/score_predict.py \
   --train_path ${DATASET_PATH}/train.jsonl \
   --val_path ${DATASET_PATH}/dev.jsonl \
   --misinfo_path ${DATASET_PATH}/misinfo.json \
@@ -32,7 +32,7 @@ python identify/score_baseline.py \
   --train_score_path ${DATASET_PATH}/train-bert-scores.json\
   --val_score_path ${DATASET_PATH}/dev-bert-scores.json
 
-python identify/score_baseline.py \
+python identify/score_predict.py \
   --train_path ${DATASET_PATH}/train.jsonl \
   --val_path ${DATASET_PATH}/test.jsonl \
   --misinfo_path ${DATASET_PATH}/misinfo.json \

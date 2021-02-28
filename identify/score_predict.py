@@ -45,6 +45,9 @@ if __name__ == '__main__':
 	parser.add_argument('-mn', '--model_name', default='covid-twitter-v2-bertscore')
 	parser.add_argument('-mip', '--misinfo_path', default=None)
 	parser.add_argument('-th', '--threshold', default=None, type=float)
+	parser.add_argument('-tm', '--threshold_min', default=0.0, type=float)
+	parser.add_argument('-tx', '--threshold_max', default=1.0, type=float)
+	parser.add_argument('-ts', '--threshold_step', default=0.0005, type=float)
 
 	args = parser.parse_args()
 
@@ -94,11 +97,11 @@ if __name__ == '__main__':
 		t_f1, t_p, t_r, threshold = compute_threshold_f1(
 			scores=t_scores,
 			labels=t_labels,
-			threshold_min=0.0,
-			threshold_max=10.0,
-			threshold_step=0.05
+			threshold_min=args.threshold_min,
+			threshold_max=args.threshold_max,
+			threshold_step=args.threshold_step
 		)
-		print(f'F1: {t_f1:.4f}, P: {t_p:.4f}, R: {t_r:.4f}, T: {threshold:.2f}')
+		# print(f'{t_p:.4f}\t{t_r:.4f}\t{t_f1:.4f}\t{threshold}')
 
 	logging.info(f'Predicting on val data...')
 	v_labels, v_scores, v_missing = create_dataset(val_data, misinfo, val_scores)
@@ -108,4 +111,4 @@ if __name__ == '__main__':
 		labels=v_labels,
 		threshold=threshold
 	)
-	print(f'F1: {f1:.4f}, P: {p:.4f}, R: {r:.4f}, T: {threshold:.2f}')
+	print(f'{f1:.4f}\t{p:.4f}\t{r:.4f}\t{threshold}')

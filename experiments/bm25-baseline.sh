@@ -38,7 +38,7 @@ python preprocess/search_misinfo_index.py \
     --output_path ${DATASET_PATH}/test-bm25-scores.json \
     --top_k 1000
 
-python identify/score_baseline.py \
+python identify/score_predict.py \
   --train_path ${DATASET_PATH}/train.jsonl \
   --val_path ${DATASET_PATH}/dev.jsonl \
   --misinfo_path ${DATASET_PATH}/misinfo.json \
@@ -46,7 +46,7 @@ python identify/score_baseline.py \
   --train_score_path ${DATASET_PATH}/train-bm25-scores.json \
   --val_score_path ${DATASET_PATH}/dev-bm25-scores.json
 
-python identify/score_baseline.py \
+python identify/score_predict.py \
   --train_path ${DATASET_PATH}/train.jsonl \
   --val_path ${DATASET_PATH}/test.jsonl \
   --misinfo_path ${DATASET_PATH}/misinfo.json \

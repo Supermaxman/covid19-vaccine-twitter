@@ -120,7 +120,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 			return loss, scores
 		else:
-			return ex_embs, m_embs
+			return ex_embs, m_embs, scores
 
 	def training_step(self, batch, batch_nb):
 		loss, scores = self._forward_step(batch, batch_nb)
@@ -150,25 +150,40 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 			return result
 		else:
-			# TODO not correct for new formulation
-			raise NotImplementedError()
-			logits = self._forward_step(batch, batch_nb)
-			logits = logits.detach()
+			ex_embs, m_embs, scores = self._forward_step(batch, batch_nb)
+			scores = scores.detach()
 			device_id = get_device_id()
-			ex_dict = {
-				'id': batch['id'],
-				'question_id': batch['question_id'],
-			}
-			for i in range(logits.shape[-1]):
-				ex_dict[f'{i}_score'] = logits[:, i].tolist()
+			if len(scores.shape) == 2:
+				ids = []
+				m_ids = []
+				m_scores = []
+
+				for b_idx, b_id in enumerate(batch['id']):
+					for m_idx, m_id in enumerate(batch['m_ids']):
+						m_score = scores[b_idx, m_idx].item()
+						ids.append(b_id)
+						m_ids.append(m_id)
+						m_scores.append(m_score)
+
+				ex_dict = {
+					'id': ids,
+					'm_id': m_ids,
+					'm_score': m_scores,
+				}
+			else:
+				ex_dict = {
+					'id': batch['id'],
+					'm_id': batch['m_ids'],
+					'm_score': scores.tolist()
+				}
 			self.write_prediction_dict(
 				ex_dict,
 				filename=os.path.join(self.predict_path, f'predictions-{device_id}.pt')
 			)
 			result = {
 				f'{name}_id': batch['id'],
-				f'{name}_question_id': batch['question_id'],
-				f'{name}_logits': logits,
+				f'{name}_m_ids': batch['m_ids'],
+				f'{name}_scores': scores,
 			}
 
 			return result
@@ -379,9 +394,9 @@ class CovidTwitterPairwiseMisinfoModel(BaseCovidTwitterMisinfoModel):
 
 	def _get_threshold_range(self):
 		return np.arange(
-			start=0.8,
+			start=0.00,
 			stop=1.00,
-			step=0.00001
+			step=0.0005
 		)
 
 

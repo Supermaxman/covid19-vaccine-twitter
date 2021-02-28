@@ -10,7 +10,10 @@ DATASET=v1
 
 # major hyper-parameters for system
 MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
-#MISINFO_THRESHOLD=0.2
+
+MISINFO_THRESHOLD_MIN=0.00
+MISINFO_THRESHOLD_MAX=1.00
+MISINFO_THRESHOLD_STEP=0.0005
 
 MISINFO_BATCH_SIZE=8
 MISINFO_MODEL_TYPE=lm-pairwise
@@ -23,7 +26,7 @@ MISINFO_TRAIN_EPOCHS=10
 MISINFO_EVAL_BATCH_SIZE=8
 
 MISINFO_NUM_GPUS=1
-MISINFO_TRAIN=true
+MISINFO_TRAIN=false
 MISINFO_RUN=true
 MISINFO_EVAL=true
 
@@ -71,7 +74,6 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --train_sampling ${MISINFO_TRAIN_SAMPLING} \
       --learning_rate ${MISINFO_LEARNING_RATE} \
       --epochs ${MISINFO_TRAIN_EPOCHS} \
-      --fine_tune \
       --gpus ${MISINFO_TRAIN_GPUS}
 fi
 
