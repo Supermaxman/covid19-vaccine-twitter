@@ -20,9 +20,12 @@ def create_dataset(tweets, misinfo, tweet_scores):
 			missing_count += 1
 			continue
 		t_scores = tweet_scores[tweet_id]
-		for m_id, m_label in t['misinfo'].items():
-			m_label = label_text_to_relevant_id(m_label)
+		for m_id in misinfo:
 			m_score = t_scores[m_id]
+			m_label = 0
+			if m_id in t['misinfo']:
+				m_label = label_text_to_relevant_id(t['misinfo'][m_id])
+
 			labels[t_idx, m_map[m_id]] = m_label
 			scores[t_idx, m_map[m_id]] = m_score
 	return labels, scores, missing_count
