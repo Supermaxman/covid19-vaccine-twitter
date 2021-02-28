@@ -380,9 +380,9 @@ class CovidTwitterPairwiseMisinfoModel(BaseCovidTwitterMisinfoModel):
 
 	def _get_threshold_range(self):
 		return np.arange(
-			start=0.00,
+			start=0.8,
 			stop=1.00,
-			step=0.0005
+			step=0.00001
 		)
 
 
