@@ -78,7 +78,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
 fi
 
 if [[ ${MISINFO_RUN} = true ]]; then
-    echo "Running misinfo..."
+    echo "Running dev misinfo..."
     python identify/predict.py \
       --model_type ${MISINFO_MODEL_TYPE} \
       --losses ${MISINFO_LOSSES} \
@@ -97,6 +97,7 @@ if [[ ${MISINFO_RUN} = true ]]; then
       --input_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
       --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/dev_scores.json
 
+    echo "Running test misinfo..."
     python identify/predict.py \
       --model_type ${MISINFO_MODEL_TYPE} \
       --losses ${MISINFO_LOSSES} \
@@ -133,7 +134,6 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       --threshold_min ${MISINFO_THRESHOLD_MIN} \
       --threshold_max ${MISINFO_THRESHOLD_MAX} \
       --threshold_step ${MISINFO_THRESHOLD_STEP}
-
 fi
 
 
