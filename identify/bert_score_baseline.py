@@ -76,15 +76,17 @@ if __name__ == '__main__':
 	logging.info(f'Loading val dataset: {args.val_path}')
 	val_data = read_jsonl(args.val_path)
 
-	logging.info(f'Calculating training threshold...')
-	t_labels, t_scores = create_dataset(train_data, misinfo, scores, alt_scores)
-	_, _, _, threshold = compute_threshold_f1(
-		scores=t_scores,
-		labels=t_labels,
-		threshold_min=-10.0,
-		threshold_max=10.0,
-		threshold_step=0.05
-	)
+	threshold = args.threshold
+	if threshold is None:
+		logging.info(f'Calculating training threshold...')
+		t_labels, t_scores = create_dataset(train_data, misinfo, scores, alt_scores)
+		_, _, _, threshold = compute_threshold_f1(
+			scores=t_scores,
+			labels=t_labels,
+			threshold_min=-10.0,
+			threshold_max=10.0,
+			threshold_step=0.05
+		)
 
 	logging.info(f'Predicting on val data...')
 	v_labels, v_scores = create_dataset(val_data, misinfo, scores, alt_scores)
