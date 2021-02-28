@@ -29,6 +29,10 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		self.threshold = threshold
 		self.predict_mode = predict_mode
 		self.predict_path = predict_path
+		if self.predict_mode:
+			if not os.path.exists(self.predict_path):
+				os.mkdir(self.predict_path)
+
 		self.load_pretrained = load_pretrained
 		if self.predict_mode or self.load_pretrained:
 			# no need to load pre-trained weights since we will be loading whole model's
