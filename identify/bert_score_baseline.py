@@ -13,15 +13,19 @@ def create_dataset(tweets, misinfo, tweet_scores):
 	scores = torch.zeros([len(tweets), len(misinfo)], dtype=torch.float)
 	labels = torch.zeros([len(tweets), len(misinfo)], dtype=torch.long)
 	m_map = {m_id: m_idx for (m_idx, m_id) in enumerate(misinfo.keys())}
+	missing_count = 0
 	for t_idx, t in enumerate(tweets):
 		tweet_id = t['id']
+		if tweet_id not in tweet_scores:
+			missing_count += 1
+			continue
 		t_scores = tweet_scores[tweet_id]
 		for m_id, m_label in t['misinfo'].items():
 			m_label = label_text_to_relevant_id(m_label)
 			m_score = t_scores[m_id]
 			labels[t_idx, m_map[m_id]] = m_label
 			scores[t_idx, m_map[m_id]] = m_score
-	return labels, scores
+	return labels, scores, missing_count
 
 
 if __name__ == '__main__':
@@ -71,7 +75,9 @@ if __name__ == '__main__':
 	threshold = args.threshold
 	if threshold is None:
 		logging.info(f'Calculating training threshold...')
-		t_labels, t_scores = create_dataset(train_data, misinfo, scores)
+		t_labels, t_scores, t_missing = create_dataset(train_data, misinfo, scores)
+		logging.info(f'Missing training tweet scores: {t_missing}')
+
 		_, _, _, threshold = compute_threshold_f1(
 			scores=t_scores,
 			labels=t_labels,
@@ -81,7 +87,8 @@ if __name__ == '__main__':
 		)
 
 	logging.info(f'Predicting on val data...')
-	v_labels, v_scores = create_dataset(val_data, misinfo, scores)
+	v_labels, v_scores, v_missing = create_dataset(val_data, misinfo, scores)
+	logging.info(f'Missing val tweet scores: {v_missing}')
 	f1, p, r, _ = compute_threshold_f1(
 		scores=v_scores,
 		labels=v_labels,
