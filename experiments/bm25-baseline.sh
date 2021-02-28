@@ -2,18 +2,19 @@
 
 DATASET=v1
 DATASET_PATH=data/${DATASET}
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.7.10-0.fc30.x86_64/
 
-mkdir data/misinfo-index-data
+mkdir ${DATASET_PATH}/misinfo-index-data
 
 python preprocess/convert_misinfo_to_jsonl.py \
     --input_path ${DATASET_PATH}/misinfo.json \
-    --output_path ${DATASET_PATH}/misinfo.jsonl
+    --output_path ${DATASET_PATH}/misinfo-index-data/misinfo.jsonl
 
 python -m pyserini.index \
     -collection JsonCollection \
     -generator DefaultLuceneDocumentGenerator \
     -threads 8 \
-    -input ${DATASET_PATH}/misinfo.jsonl \
+    -input ${DATASET_PATH}/misinfo-index-data/ \
     -index ${DATASET_PATH}/misinfo-v1 \
     -storePositions \
     -storeDocvectors \

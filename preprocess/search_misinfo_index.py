@@ -7,6 +7,20 @@ from collections import defaultdict
 from pyserini.search import SimpleSearcher
 
 
+def read_jsonl(path):
+	examples = []
+	with open(path, 'r') as f:
+		for line in f:
+			line = line.strip()
+			if line:
+				try:
+					ex = json.loads(line)
+					examples.append(ex)
+				except Exception as e:
+					print(e)
+	return examples
+
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-i', '--index_path', required=True)
@@ -17,9 +31,7 @@ if __name__ == '__main__':
 	parser.add_argument('-bb', '--bm25_b', default=0.68, type=float)
 
 	args = parser.parse_args()
-
-	with open(args.query_path) as f:
-		tweets = json.load(f)
+	tweets = read_jsonl(args.query_path)
 
 	searcher = SimpleSearcher(args.index_path)
 	searcher.set_bm25(args.bm25_k1, args.bm25_b)
