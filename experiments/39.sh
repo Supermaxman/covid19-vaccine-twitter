@@ -91,7 +91,6 @@ if [[ ${MISINFO_RUN} = true ]]; then
       --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
       --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
       --train_sampling ${MISINFO_TRAIN_SAMPLING} \
-      --load_trained_model \
       --gpus ${MISINFO_EVAL_GPUS} \
     ; \
     python identify/format_predictions.py \
@@ -110,7 +109,6 @@ if [[ ${MISINFO_RUN} = true ]]; then
       --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
       --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
       --train_sampling ${MISINFO_TRAIN_SAMPLING} \
-      --load_trained_model \
       --gpus ${MISINFO_EVAL_GPUS} \
     ; \
     python identify/format_predictions.py \
