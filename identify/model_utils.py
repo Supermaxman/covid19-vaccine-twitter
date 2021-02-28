@@ -206,11 +206,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 			if self.threshold is None:
 				# cosine similarities between -1 and 1
-				threshold_range = np.arange(
-					start=-1.00,
-					stop=1.00,
-					step=0.05
-				)
+				threshold_range = self._get_threshold_range()
 			else:
 				threshold_range = [self.threshold]
 			max_metric = float('-inf')
@@ -259,6 +255,13 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			{'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}]
 
 		return optimizer_params
+
+	def _get_threshold_range(self):
+		return np.arange(
+			start=-1.00,
+			stop=1.00,
+			step=0.05
+		)
 
 
 class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
@@ -374,6 +377,13 @@ class CovidTwitterPairwiseMisinfoModel(BaseCovidTwitterMisinfoModel):
 		# [b_size, seq_len, lm_size] -> [b_size, lm_size]
 		cls_output = contextualized_embeddings[:, 0]
 		return cls_output
+
+	def _get_threshold_range(self):
+		return np.arange(
+			start=0.00,
+			stop=1.00,
+			step=0.0005
+		)
 
 
 def get_device_id():
