@@ -78,13 +78,14 @@ if __name__ == '__main__':
 		t_labels, t_scores, t_missing = create_dataset(train_data, misinfo, scores)
 		logging.info(f'Missing training tweet scores: {t_missing}')
 
-		_, _, _, threshold = compute_threshold_f1(
+		t_f1, t_p, t_r, threshold = compute_threshold_f1(
 			scores=t_scores,
 			labels=t_labels,
-			threshold_min=-10.0,
-			threshold_max=10.0,
+			threshold_min=0.0,
+			threshold_max=1.0,
 			threshold_step=0.05
 		)
+		print(f'F1: {t_f1:.4f}, P: {t_p:.4f}, R: {t_r:.4f}, T: {threshold:.2f}')
 
 	logging.info(f'Predicting on val data...')
 	v_labels, v_scores, v_missing = create_dataset(val_data, misinfo, scores)
