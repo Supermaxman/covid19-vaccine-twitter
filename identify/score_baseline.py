@@ -24,6 +24,8 @@ def create_dataset(tweets, misinfo, tweet_scores):
 			# if m_id not in t_scores:
 			# 	m_score = 0.0
 			# else:
+			if m_id not in t_scores:
+				print(tweet_id)
 			m_score = t_scores[m_id]
 			m_label = 0
 			if m_id in t['misinfo']:
