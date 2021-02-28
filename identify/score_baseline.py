@@ -21,12 +21,10 @@ def create_dataset(tweets, misinfo, tweet_scores):
 			continue
 		t_scores = tweet_scores[tweet_id]
 		for m_id in misinfo:
-			# if m_id not in t_scores:
-			# 	m_score = 0.0
-			# else:
 			if m_id not in t_scores:
-				print(tweet_id)
-			m_score = t_scores[m_id]
+				m_score = 0.0
+			else:
+				m_score = t_scores[m_id]
 			m_label = 0
 			if m_id in t['misinfo']:
 				m_label = label_text_to_relevant_id(t['misinfo'][m_id])
