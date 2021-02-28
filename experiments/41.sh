@@ -58,6 +58,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
     echo "Training misinfo model..."
     python identify/train.py \
       --model_type ${MISINFO_MODEL_TYPE} \
+      --losses ${MISINFO_LOSSES} \
       --emb_size ${MISINFO_EMB_SIZE} \
       --misinfo_path ${DATASET_PATH}/misinfo.json \
       --train_path ${DATASET_PATH}/train.jsonl \
