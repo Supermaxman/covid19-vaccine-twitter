@@ -109,4 +109,5 @@ if __name__ == '__main__':
 		labels=v_labels,
 		threshold=threshold
 	)
-	print(f'{f1:.4f}\t{p:.4f}\t{r:.4f}\t{threshold}')
+	print(f'P\tR\tF1\tT')
+	print(f'{p:.4f}\t{r:.4f}\t{f1:.4f}\t{threshold}')
