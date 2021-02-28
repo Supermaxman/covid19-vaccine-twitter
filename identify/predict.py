@@ -16,7 +16,6 @@ import torch
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-tp', '--train_path', required=True)
 	parser.add_argument('-vp', '--val_path', required=True)
 	parser.add_argument('-op', '--output_path', required=True)
 	parser.add_argument('-pm', '--pre_model_name', default='nboost/pt-biobert-base-msmarco')
@@ -72,8 +71,6 @@ if __name__ == '__main__':
 
 	logging.info(f'Loading tokenizer: {args.pre_model_name}')
 	tokenizer = BertTokenizerFast.from_pretrained(args.pre_model_name)
-	logging.info(f'Loading train dataset: {args.train_path}')
-	train_data = read_jsonl(args.train_path)
 	logging.info(f'Loading val dataset: {args.val_path}')
 	val_data = read_jsonl(args.val_path)
 
