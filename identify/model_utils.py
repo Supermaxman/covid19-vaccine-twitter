@@ -383,6 +383,13 @@ class CovidTwitterStaticMisinfoModel(BaseCovidTwitterMisinfoModel):
 		cls_output = contextualized_embeddings[:, 0]
 		return cls_output
 
+	def _get_threshold_range(self):
+		return np.arange(
+			start=0.00,
+			stop=1.00,
+			step=0.0005
+		)
+
 
 class CovidTwitterMisinfoAvgModel(CovidTwitterMisinfoModel):
 	def __init__(
