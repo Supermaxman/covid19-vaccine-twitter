@@ -389,6 +389,60 @@ class MisinfoPositiveDataset(MisinfoDataset):
 		return example
 
 
+class MisinfoPairwiseDataset(MisinfoDataset):
+	def __init__(
+			self,
+			documents,
+			tokenizer,
+			misinfo,
+			all_misinfo=False
+	):
+		super().__init__(documents, tokenizer)
+		self.misinfo = misinfo
+		self.all_misinfo = all_misinfo
+		self.pairwise_examples = []
+		self.tokenizer = tokenizer
+		for ex in self.examples:
+			if all_misinfo:
+				misinfo_ids = set(misinfo.keys())
+			else:
+				misinfo_ids = ex['m_pos_labels'].union(ex['m_neg_labels'])
+			for m_id in misinfo_ids:
+				m_label = 0
+				if m_id in ex['m_pos_labels']:
+					m_label = 1
+				p_ex = self._create_example(ex, m_id, m_label)
+				self.pairwise_examples.append(p_ex)
+
+		random.shuffle(self.pairwise_examples)
+
+	def _create_example(self, ex, m_id, m_label):
+		m = self.misinfo[m_id]
+		m_text = m['text']
+		p_ex = ex.copy()
+		p_ex['m_id'] = m_id
+		p_ex['labels'] = m_label
+		token_data = self.tokenizer(
+			m_text,
+			ex['text']
+		)
+		p_ex['input_ids'] = token_data['input_ids']
+		p_ex['token_type_ids'] = token_data['token_type_ids']
+		p_ex['attention_mask'] = token_data['attention_mask']
+		return p_ex
+
+	def __len__(self):
+		return len(self.pairwise_examples)
+
+	def __getitem__(self, idx):
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
+
+		example = self.pairwise_examples[idx]
+
+		return example
+
+
 class MisinfoBatchCollator:
 	def __init__(
 			self, misinfo: dict, tokenizer, max_seq_len: int,
@@ -406,17 +460,17 @@ class MisinfoBatchCollator:
 			)
 		self.labeled = labeled
 
-	def _calculate_seq_padding(self, examples, batch_misinfo):
+	def _calculate_seq_padding(self, examples, batch_misinfo=None):
 		if self.force_max_seq_len:
 			pad_seq_len = self.max_seq_len
 		else:
 			pad_seq_len = 0
 			for ex in examples:
 				pad_seq_len = max(pad_seq_len, min(len(ex['input_ids']), self.max_seq_len))
-
-			for m_id, m_idx in batch_misinfo.items():
-				m = self.misinfo[m_id]
-				pad_seq_len = max(pad_seq_len, min(len(m['token_data']['input_ids']), self.max_seq_len))
+			if batch_misinfo is not None:
+				for m_id, m_idx in batch_misinfo.items():
+					m = self.misinfo[m_id]
+					pad_seq_len = max(pad_seq_len, min(len(m['token_data']['input_ids']), self.max_seq_len))
 
 		return pad_seq_len
 
@@ -485,5 +539,46 @@ class MisinfoBatchCollator:
 	def pad_and_apply(self, id_list, id_tensor, ex_idx):
 		ex_ids = id_list[:self.max_seq_len]
 		id_tensor[ex_idx, :len(ex_ids)] = torch.tensor(ex_ids, dtype=torch.long)
+
+
+class MisinfoPairwiseBatchCollator(MisinfoBatchCollator):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+	def __call__(self, examples):
+		pad_seq_len = self._calculate_seq_padding(examples)
+
+		batch_size = len(examples)
+		input_ids = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
+		attention_mask = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
+		token_type_ids = torch.zeros([batch_size, pad_seq_len], dtype=torch.long)
+
+		# [ex_count]
+		labels = torch.zeros([len(examples)], dtype=torch.long)
+		if self.labeled:
+			for ex_idx, ex in enumerate(examples):
+				labels[ex_idx] = ex['labels']
+
+		ids = []
+		m_ids = []
+		for ex_idx, ex in enumerate(examples):
+			ids.append(ex['id'])
+			m_ids.append(ex['m_id'])
+			self.pad_and_apply(ex['input_ids'], input_ids, ex_idx)
+			self.pad_and_apply(ex['attention_mask'], attention_mask, ex_idx)
+			self.pad_and_apply(ex['token_type_ids'], token_type_ids, ex_idx)
+
+		batch = {
+			'id': ids,
+			'm_ids': m_ids,
+			'num_misinfo': 0,
+			'num_examples': len(examples),
+			'input_ids': input_ids,
+			'attention_mask': attention_mask,
+			'token_type_ids': token_type_ids,
+			'labels': labels,
+		}
+
+		return batch
 
 

@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import loggers as pl_loggers
 
 from model_utils import *
-from data_utils import MisinfoBatchSampler, MisinfoDataset, MisinfoPositiveDataset, MisinfoBatchCollator, read_jsonl
+from data_utils import *
 
 import torch
 
@@ -188,31 +188,71 @@ if __name__ == '__main__':
 			)
 		)
 		train_size = len(train_dataset)
+	elif train_sampling == 'pairwise':
+		train_dataset = MisinfoPairwiseDataset(
+			documents=train_data,
+			tokenizer=tokenizer,
+			misinfo=misinfo,
+			all_misinfo=False
+		)
+		train_data_loader = DataLoader(
+			train_dataset,
+			num_workers=num_workers,
+			batch_size=args.batch_size,
+			shuffle=True,
+			collate_fn=MisinfoPairwiseBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+		train_size = len(train_dataset)
 	else:
 		raise ValueError(f'Unknown sampling: {train_sampling}')
-	val_dataset = MisinfoDataset(
-		documents=val_data,
-		tokenizer=tokenizer
-	)
+	if train_sampling == 'pairwise':
+		val_dataset = MisinfoPairwiseDataset(
+			documents=val_data,
+			tokenizer=tokenizer,
+			misinfo=misinfo,
+			all_misinfo=True
+		)
+		val_data_loader = DataLoader(
+			val_dataset,
+			num_workers=num_workers,
+			shuffle=False,
+			batch_size=args.eval_batch_size,
+			collate_fn=MisinfoPairwiseBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				all_misinfo=True,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+	else:
+		val_dataset = MisinfoDataset(
+			documents=val_data,
+			tokenizer=tokenizer
+		)
+		val_data_loader = DataLoader(
+			val_dataset,
+			num_workers=num_workers,
+			shuffle=False,
+			batch_size=args.eval_batch_size,
+			collate_fn=MisinfoBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				all_misinfo=True,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
 
 	logging.info(f'train_sampling={train_sampling}')
 	logging.info(f'train_labels={train_dataset.num_labels}')
 	logging.info(f'train={train_size}')
 	logging.info(f'val={len(val_dataset)}')
-
-	val_data_loader = DataLoader(
-		val_dataset,
-		num_workers=num_workers,
-		shuffle=False,
-		batch_size=args.eval_batch_size,
-		collate_fn=MisinfoBatchCollator(
-			misinfo,
-			tokenizer,
-			args.max_seq_len,
-			all_misinfo=True,
-			force_max_seq_len=args.use_tpus,
-		)
-	)
 
 	num_batches_per_step = (len(gpus) if not args.use_tpus else tpu_cores)
 	updates_epoch = train_size // (args.batch_size * num_batches_per_step)
@@ -241,6 +281,10 @@ if __name__ == '__main__':
 		model = CovidTwitterMisinfoAvgModel(
 			**model_args,
 			emb_size=args.emb_size
+		)
+	elif model_type == 'lm-pairwise':
+		model = CovidTwitterPairwiseMisinfoModel(
+			**model_args
 		)
 	else:
 		raise ValueError(f'Unknown model type: {model_type}')

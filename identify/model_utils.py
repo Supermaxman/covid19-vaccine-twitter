@@ -335,6 +335,47 @@ class CovidTwitterMisinfoAvgModel(CovidTwitterMisinfoModel):
 		return avg_output
 
 
+class CovidTwitterPairwiseMisinfoModel(BaseCovidTwitterMisinfoModel):
+	def __init__(
+			self, *args, **kwargs
+	):
+		super().__init__(*args, **kwargs)
+
+		self.f_dropout = nn.Dropout(
+			p=self.config.hidden_dropout_prob
+		)
+		self.cls_classification_layer = nn.Linear(
+			self.config.hidden_size,
+			1,
+			bias=False
+		)
+
+		self.score_func = torch.nn.Sigmoid()
+
+	def forward(self, input_ids, attention_mask, token_type_ids, batch):
+		# [num_misinfo + bsize, seq_len, hidden_size]
+		outputs = self.bert(
+			input_ids,
+			attention_mask=attention_mask,
+			token_type_ids=token_type_ids
+		)
+		contextualized_embeddings = outputs[0]
+		# [num_misinfo + bsize, hidden_size]
+		lm_output = self._get_lm_output(contextualized_embeddings, attention_mask)
+		lm_output = self.f_dropout(lm_output)
+		# [bsize]
+		logits = self.cls_classification_layer(lm_output).squeeze(dim=-1)
+		scores = self.score_func(logits + self.bias)
+
+		return None, None, logits, scores
+
+	def _get_lm_output(self, contextualized_embeddings, attention_mask):
+		# cls embedding is first seq embedding
+		# [b_size, seq_len, lm_size] -> [b_size, lm_size]
+		cls_output = contextualized_embeddings[:, 0]
+		return cls_output
+
+
 def get_device_id():
 	try:
 		device_id = dist.get_rank()
