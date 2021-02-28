@@ -118,12 +118,12 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 			loss = self._loss(logits, labels)
 
-			return loss, logits, scores
+			return loss, scores
 		else:
-			return logits, ex_embs, m_embs
+			return ex_embs, m_embs
 
 	def training_step(self, batch, batch_nb):
-		loss, logits, scores = self._forward_step(batch, batch_nb)
+		loss, scores = self._forward_step(batch, batch_nb)
 		self.log('train_loss', loss)
 		for log_name, log_value in self.batch_log.items():
 			self.log(f'train_{log_name}', log_value)
@@ -140,11 +140,10 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 	def _eval_step(self, batch, batch_nb, name):
 		if not self.predict_mode:
-			loss, logits, scores = self._forward_step(batch, batch_nb)
+			loss, scores = self._forward_step(batch, batch_nb)
 			result = {
 				f'{name}_loss': loss,
 				f'{name}_batch_loss': loss,
-				f'{name}_batch_logits': logits,
 				f'{name}_batch_scores': scores,
 				f'{name}_batch_labels': batch['labels'],
 			}
@@ -174,15 +173,15 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 			return result
 
-	def _get_predictions(self, logits, threshold):
+	def _get_predictions(self, scores, threshold):
 		# normalize over
-		predictions = (logits.gt(threshold)).long()
+		predictions = (scores.gt(threshold)).long()
 		return predictions
 
-	def _get_metrics(self, logits, labels, threshold, name):
+	def _get_metrics(self, scores, labels, threshold, name):
 		metrics = {}
 		# [num_examples, num_misinfo]
-		predictions = self._get_predictions(logits, threshold)
+		predictions = self._get_predictions(scores, threshold)
 		# label is positive and predicted positive
 		i_tp = (predictions.eq(1).float() * labels.eq(1).float()).sum()
 		# label is not positive and predicted positive
