@@ -341,6 +341,49 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		return cls_output
 
 
+class CovidTwitterStaticMisinfoModel(BaseCovidTwitterMisinfoModel):
+	def __init__(
+			self, num_misinfo, *args, **kwargs
+	):
+		super().__init__(*args, **kwargs)
+		self.num_misinfo = num_misinfo
+
+		self.f_dropout = nn.Dropout(
+			p=self.config.hidden_dropout_prob
+		)
+		self.cls_layer = nn.Linear(
+			self.config.hidden_size,
+			self.num_misinfo,
+			bias=False
+		)
+		self.bias = Parameter(torch.zeros(self.num_misinfo, dtype=torch.float))
+		self.score_func = torch.nn.Sigmoid()
+
+	def forward(self, input_ids, attention_mask, token_type_ids, batch):
+		num_misinfo = batch['num_misinfo']
+		# [bsize, seq_len, hidden_size]
+		outputs = self.bert(
+			input_ids[num_misinfo:],
+			attention_mask=attention_mask[num_misinfo:],
+			token_type_ids=token_type_ids[num_misinfo:]
+		)
+		contextualized_embeddings = outputs[0]
+		# [bsize, hidden_size]
+		lm_output = self._get_lm_output(contextualized_embeddings, attention_mask)
+		lm_output = self.f_dropout(lm_output)
+		# [bsize, num_misinfo]
+		logits = self.cls_layer(lm_output)
+		scores = self.score_func(logits + self.bias)
+
+		return None, None, logits, scores
+
+	def _get_lm_output(self, contextualized_embeddings, attention_mask):
+		# cls embedding is first seq embedding
+		# [b_size, seq_len, lm_size] -> [b_size, lm_size]
+		cls_output = contextualized_embeddings[:, 0]
+		return cls_output
+
+
 class CovidTwitterMisinfoAvgModel(CovidTwitterMisinfoModel):
 	def __init__(
 			self, *args, **kwargs

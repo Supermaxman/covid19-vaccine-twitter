@@ -133,7 +133,10 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       --val_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json \
       --threshold_min ${MISINFO_THRESHOLD_MIN} \
       --threshold_max ${MISINFO_THRESHOLD_MAX} \
-      --threshold_step ${MISINFO_THRESHOLD_STEP}
+      --threshold_step ${MISINFO_THRESHOLD_STEP} \
+      > ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt \
+      ; \
+      tail -n 1 ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt
 fi
 
 
