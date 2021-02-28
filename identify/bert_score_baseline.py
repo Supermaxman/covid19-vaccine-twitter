@@ -3,7 +3,6 @@ import os
 import json
 import argparse
 import logging
-import pytorch_lightning as pl
 import torch
 
 from metric_utils import compute_threshold_f1
@@ -37,8 +36,6 @@ if __name__ == '__main__':
 	parser.add_argument('-th', '--threshold', default=None, type=float)
 
 	args = parser.parse_args()
-
-	pl.seed_everything(args.seed)
 
 	save_directory = os.path.join(args.save_directory, args.model_name)
 	checkpoint_path = os.path.join(save_directory, 'pytorch_model.bin')
