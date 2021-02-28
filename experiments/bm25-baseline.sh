@@ -3,13 +3,6 @@
 DATASET=v1
 DATASET_PATH=data/${DATASET}
 
-#python identify/score_baseline.py \
-#  --train_path ${DATASET_PATH}/train.jsonl \
-#  --val_path ${DATASET_PATH}/dev.jsonl \
-#  --misinfo_path ${DATASET_PATH}/misinfo.json \
-#  --model_name covid-twitter-v2-bertscore \
-#  --score_path data/scores.json
-
 mkdir data/misinfo-index-data
 
 python preprocess/convert_misinfo_to_jsonl.py \
