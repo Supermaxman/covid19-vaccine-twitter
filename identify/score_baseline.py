@@ -95,7 +95,7 @@ if __name__ == '__main__':
 			scores=t_scores,
 			labels=t_labels,
 			threshold_min=0.0,
-			threshold_max=1.0,
+			threshold_max=10.0,
 			threshold_step=0.05
 		)
 		print(f'F1: {t_f1:.4f}, P: {t_p:.4f}, R: {t_r:.4f}, T: {threshold:.2f}')
