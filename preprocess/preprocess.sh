@@ -102,9 +102,10 @@ python preprocess/create_split.py \
     --test_size 0.2 \
     --dev_size 0.1
 
+# Train size: 3637, Dev size: 387, Test size: 1164
 python preprocess/create_zero_split.py \
     --input_path data/unique-art-v1-annotated-bert-bm25-merged.jsonl \
     --output_path data/v2 \
     --misinfo_path data/misinfo.json \
     --dev_mids 8 \
-    --test_mids 4,5
+    --test_mids 4,5,7

@@ -104,7 +104,8 @@ if __name__ == '__main__':
 	else:
 		val_dataset = MisinfoDataset(
 			documents=val_data,
-			tokenizer=tokenizer
+			tokenizer=tokenizer,
+			misinfo=misinfo
 		)
 		val_data_loader = DataLoader(
 			val_dataset,

@@ -33,7 +33,8 @@ if __name__ == '__main__':
 	parser.add_argument('-lt', '--load_checkpoint', default=None)
 	parser.add_argument('-ts', '--train_sampling', default='none')
 	parser.add_argument('-ls', '--losses', default='compare_loss')
-	parser.add_argument('-mip', '--misinfo_path', default=None)
+	parser.add_argument('-tmp', '--train_misinfo_path', default=None)
+	parser.add_argument('-vmp', '--val_misinfo_path', default=None)
 	parser.add_argument('-mt', '--model_type', default='lm')
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
 	parser.add_argument('-wd', '--weight_decay', default=0.0, type=float)
@@ -81,9 +82,11 @@ if __name__ == '__main__':
 	logging.info(f'Loading val dataset: {args.val_path}')
 	val_data = read_jsonl(args.val_path)
 
-	logging.info(f'Loading misinfo: {args.misinfo_path}')
-	with open(args.misinfo_path, 'r') as f:
-		misinfo = json.load(f)
+	logging.info('Loading misinfo')
+	with open(args.train_misinfo_path, 'r') as f:
+		train_misinfo = json.load(f)
+	with open(args.val_misinfo_path, 'r') as f:
+		val_misinfo = json.load(f)
 
 		logging.info(f'Loaded misconception info.')
 	logging.info('Loading datasets...')
@@ -91,7 +94,8 @@ if __name__ == '__main__':
 	if train_sampling == 'positive':
 		train_dataset = MisinfoDataset(
 			documents=train_data,
-			tokenizer=tokenizer
+			tokenizer=tokenizer,
+			misinfo=train_misinfo
 		)
 		train_batch_sampler = MisinfoBatchSampler(
 			dataset=train_dataset,
@@ -105,7 +109,7 @@ if __name__ == '__main__':
 			num_workers=num_workers,
 			batch_sampler=train_batch_sampler,
 			collate_fn=MisinfoBatchCollator(
-				misinfo,
+				train_misinfo,
 				tokenizer,
 				args.max_seq_len,
 				force_max_seq_len=args.use_tpus,
@@ -123,7 +127,7 @@ if __name__ == '__main__':
 			batch_size=args.batch_size,
 			shuffle=True,
 			collate_fn=MisinfoBatchCollator(
-				misinfo,
+				train_misinfo,
 				tokenizer,
 				args.max_seq_len,
 				all_misinfo=True,
@@ -142,7 +146,7 @@ if __name__ == '__main__':
 			batch_size=args.batch_size,
 			shuffle=True,
 			collate_fn=MisinfoBatchCollator(
-				misinfo,
+				train_misinfo,
 				tokenizer,
 				args.max_seq_len,
 				neg_misinfo=True,
@@ -153,7 +157,8 @@ if __name__ == '__main__':
 	elif train_sampling == 'negative':
 		train_dataset = MisinfoDataset(
 			documents=train_data,
-			tokenizer=tokenizer
+			tokenizer=tokenizer,
+			misinfo=train_misinfo
 		)
 		train_data_loader = DataLoader(
 			train_dataset,
@@ -161,7 +166,7 @@ if __name__ == '__main__':
 			batch_size=args.batch_size,
 			shuffle=True,
 			collate_fn=MisinfoBatchCollator(
-				misinfo,
+				train_misinfo,
 				tokenizer,
 				args.max_seq_len,
 				neg_misinfo=True,
@@ -180,7 +185,7 @@ if __name__ == '__main__':
 			batch_size=args.batch_size,
 			shuffle=True,
 			collate_fn=MisinfoBatchCollator(
-				misinfo,
+				train_misinfo,
 				tokenizer,
 				args.max_seq_len,
 				force_max_seq_len=args.use_tpus,
@@ -191,7 +196,7 @@ if __name__ == '__main__':
 		train_dataset = MisinfoPairwiseDataset(
 			documents=train_data,
 			tokenizer=tokenizer,
-			misinfo=misinfo,
+			misinfo=train_misinfo,
 			all_misinfo=False
 		)
 		train_data_loader = DataLoader(
@@ -200,7 +205,7 @@ if __name__ == '__main__':
 			batch_size=args.batch_size,
 			shuffle=True,
 			collate_fn=MisinfoPairwiseBatchCollator(
-				misinfo,
+				train_misinfo,
 				tokenizer,
 				args.max_seq_len,
 				force_max_seq_len=args.use_tpus,
@@ -213,7 +218,7 @@ if __name__ == '__main__':
 		val_dataset = MisinfoPairwiseDataset(
 			documents=val_data,
 			tokenizer=tokenizer,
-			misinfo=misinfo,
+			misinfo=val_misinfo,
 			all_misinfo=True
 		)
 		val_data_loader = DataLoader(
@@ -222,7 +227,7 @@ if __name__ == '__main__':
 			shuffle=False,
 			batch_size=args.eval_batch_size,
 			collate_fn=MisinfoPairwiseBatchCollator(
-				misinfo,
+				val_misinfo,
 				tokenizer,
 				args.max_seq_len,
 				all_misinfo=True,
@@ -232,7 +237,8 @@ if __name__ == '__main__':
 	else:
 		val_dataset = MisinfoDataset(
 			documents=val_data,
-			tokenizer=tokenizer
+			tokenizer=tokenizer,
+			misinfo=val_misinfo
 		)
 		val_data_loader = DataLoader(
 			val_dataset,
@@ -240,7 +246,7 @@ if __name__ == '__main__':
 			shuffle=False,
 			batch_size=args.eval_batch_size,
 			collate_fn=MisinfoBatchCollator(
-				misinfo,
+				val_misinfo,
 				tokenizer,
 				args.max_seq_len,
 				all_misinfo=True,
@@ -288,7 +294,7 @@ if __name__ == '__main__':
 	elif model_type == 'lm-static':
 		model = CovidTwitterStaticMisinfoModel(
 			**model_args,
-			num_misinfo=len(misinfo)
+			num_misinfo=len(train_misinfo)
 		)
 	else:
 		raise ValueError(f'Unknown model type: {model_type}')

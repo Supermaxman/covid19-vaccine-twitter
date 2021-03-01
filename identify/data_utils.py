@@ -307,6 +307,7 @@ class MisinfoDataset(Dataset):
 			self,
 			documents,
 			tokenizer,
+			misinfo
 	):
 		self.examples = []
 		self.pos_examples = []
@@ -327,6 +328,8 @@ class MisinfoDataset(Dataset):
 			m_pos_labels = set()
 			m_neg_labels = set()
 			for m_id, m_label in doc['misinfo'].items():
+				if m_id not in misinfo:
+					continue
 				m_label = label_text_to_relevant_id(m_label)
 				labels[m_id] = m_label
 				if m_label > 0:
@@ -406,8 +409,10 @@ class MisinfoPairwiseDataset(MisinfoDataset):
 			if all_misinfo:
 				misinfo_ids = set(misinfo.keys())
 			else:
-				misinfo_ids = ex['m_pos_labels'].union(ex['m_neg_labels'])
+				misinfo_ids = (ex['m_pos_labels'].union(ex['m_neg_labels']))
 			for m_id in misinfo_ids:
+				if m_id not in misinfo:
+					continue
 				m_label = 0
 				if m_id in ex['m_pos_labels']:
 					m_label = 1

@@ -63,7 +63,8 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --losses ${MISINFO_LOSSES} \
       --emb_size ${MISINFO_EMB_SIZE} \
       --misinfo_path ${DATASET_PATH}/misinfo.json \
-      --train_path ${DATASET_PATH}/train.jsonl \
+      --train_misinfo_path ${DATASET_PATH}/misinfo.json \
+      --val_misinfo_path ${DATASET_PATH}/misinfo.json \
       --val_path ${DATASET_PATH}/dev.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
