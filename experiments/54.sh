@@ -31,17 +31,17 @@ MISINFO_RUN=false
 MISINFO_EVAL=true
 
 export TOKENIZERS_PARALLELISM=true
-
-echo "Starting experiment ${RUN_NAME}_${RUN_ID}"
-echo "Reserving ${MISINFO_NUM_GPUS} GPU(s)..."
-MISINFO_GPUS=`python gpu/request_gpus.py -r ${MISINFO_NUM_GPUS}`
-if [[ ${MISINFO_GPUS} -eq -1 ]]; then
-    echo "Unable to reserve ${MISINFO_NUM_GPUS} GPU(s), exiting."
-    exit -1
-fi
-echo "Reserved ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
-MISINFO_TRAIN_GPUS=${MISINFO_GPUS}
-MISINFO_EVAL_GPUS=${MISINFO_GPUS}
+#
+#echo "Starting experiment ${RUN_NAME}_${RUN_ID}"
+#echo "Reserving ${MISINFO_NUM_GPUS} GPU(s)..."
+#MISINFO_GPUS=`python gpu/request_gpus.py -r ${MISINFO_NUM_GPUS}`
+#if [[ ${MISINFO_GPUS} -eq -1 ]]; then
+#    echo "Unable to reserve ${MISINFO_NUM_GPUS} GPU(s), exiting."
+#    exit -1
+#fi
+#echo "Reserved ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
+#MISINFO_TRAIN_GPUS=${MISINFO_GPUS}
+#MISINFO_EVAL_GPUS=${MISINFO_GPUS}
 
 DATASET_PATH=data/${DATASET}
 ARTIFACTS_PATH=artifacts/${DATASET}
@@ -118,8 +118,8 @@ if [[ ${MISINFO_RUN} = true ]]; then
 fi
 
 
-echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
-python gpu/free_gpus.py -i ${MISINFO_GPUS}
+#echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
+#python gpu/free_gpus.py -i ${MISINFO_GPUS}
 
 if [[ ${MISINFO_EVAL} = true ]]; then
     echo "Evaluating misinfo model..."
