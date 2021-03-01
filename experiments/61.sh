@@ -133,7 +133,7 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       --threshold_min ${MISINFO_THRESHOLD_MIN} \
       --threshold_max ${MISINFO_THRESHOLD_MAX} \
       --threshold_step ${MISINFO_THRESHOLD_STEP} \
-      --threshold 0.6 \
+      --threshold 0.3 \
       > ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt \
       ; \
       tail -n 1 ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt
