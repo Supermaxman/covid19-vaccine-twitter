@@ -437,18 +437,63 @@ class MisinfoPairwiseDataset(MisinfoDataset):
 		p_ex['attention_mask'] = token_data['attention_mask']
 		return p_ex
 
+	def __len__(self):
+		return len(self.pairwise_examples)
 
-class MisinfoPairwiseEmbDataset(MisinfoPairwiseDataset):
+	def __getitem__(self, idx):
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
+
+		example = self.pairwise_examples[idx]
+
+		return example
+
+
+class MisinfoPairwiseEmbDataset(MisinfoDataset):
 	def __init__(
-			self, *args, **kwargs
+			self,
+			documents,
+			tokenizer,
+			misinfo,
+			all_misinfo=False
 	):
-		super().__init__(*args, **kwargs)
+		super().__init__(documents, tokenizer, misinfo)
+		self.misinfo = misinfo
+		self.all_misinfo = all_misinfo
+		self.pairwise_examples = []
+		self.tokenizer = tokenizer
+		for ex in self.examples:
+			if all_misinfo:
+				misinfo_ids = set(misinfo.keys())
+			else:
+				misinfo_ids = (ex['m_pos_labels'].union(ex['m_neg_labels']))
+			for m_id in misinfo_ids:
+				if m_id not in misinfo:
+					continue
+				m_label = 0
+				if m_id in ex['m_pos_labels']:
+					m_label = 1
+				p_ex = self._create_example(ex, m_id, m_label)
+				self.pairwise_examples.append(p_ex)
+
+		random.shuffle(self.pairwise_examples)
 
 	def _create_example(self, ex, m_id, m_label):
 		p_ex = ex.copy()
 		p_ex['m_id'] = m_id
 		p_ex['labels'] = m_label
 		return p_ex
+
+	def __len__(self):
+		return len(self.pairwise_examples)
+
+	def __getitem__(self, idx):
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
+
+		example = self.pairwise_examples[idx]
+
+		return example
 
 
 class MisinfoBatchCollator:
