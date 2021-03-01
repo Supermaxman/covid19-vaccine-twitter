@@ -377,8 +377,9 @@ class MisinfoPositiveDataset(MisinfoDataset):
 			self,
 			documents,
 			tokenizer,
+			misinfo
 	):
-		super().__init__(documents, tokenizer)
+		super().__init__(documents, tokenizer, misinfo)
 
 	def __len__(self):
 		return len(self.pos_examples)
@@ -400,7 +401,7 @@ class MisinfoPairwiseDataset(MisinfoDataset):
 			misinfo,
 			all_misinfo=False
 	):
-		super().__init__(documents, tokenizer)
+		super().__init__(documents, tokenizer, misinfo)
 		self.misinfo = misinfo
 		self.all_misinfo = all_misinfo
 		self.pairwise_examples = []
