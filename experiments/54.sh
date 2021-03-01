@@ -14,7 +14,7 @@ MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
 MISINFO_THRESHOLD_MIN=0.00
 MISINFO_THRESHOLD_MAX=1.00
 MISINFO_THRESHOLD_STEP=0.00001
-MISINFO_THRESHOLD=0.9995
+MISINFO_THRESHOLD=0.9999
 
 MISINFO_BATCH_SIZE=8
 MISINFO_MODEL_TYPE=lm-pairwise
@@ -125,12 +125,12 @@ fi
 if [[ ${MISINFO_EVAL} = true ]]; then
     echo "Evaluating misinfo model..."
     python identify/score_predict.py \
-      --train_path ${DATASET_PATH}/test.jsonl \
-      --val_path ${DATASET_PATH}/dev.jsonl \
+      --train_path ${DATASET_PATH}/dev.jsonl \
+      --val_path ${DATASET_PATH}/test.jsonl \
       --misinfo_path ${DATASET_PATH}/test_misinfo.json \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
-      --train_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json \
-      --val_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/dev_scores.json \
+      --train_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/dev_scores.json \
+      --val_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json \
       --threshold_min ${MISINFO_THRESHOLD_MIN} \
       --threshold_max ${MISINFO_THRESHOLD_MAX} \
       --threshold_step ${MISINFO_THRESHOLD_STEP} \
