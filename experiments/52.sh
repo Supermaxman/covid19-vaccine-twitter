@@ -45,7 +45,6 @@ MISINFO_EVAL_GPUS=${MISINFO_GPUS}
 
 DATASET_PATH=data/${DATASET}
 ARTIFACTS_PATH=artifacts/${DATASET}
-MISINFO_SPLIT_FILES=""
 
 # trap ctrl+c to free GPUs
 handler()
@@ -117,7 +116,6 @@ if [[ ${MISINFO_RUN} = true ]]; then
       --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json
 fi
 
-#MISINFO_SPLIT_FILES="${MISINFO_SPLIT_FILES},${ARTIFACTS_PATH}/${RUN_NAME}_SPLIT_${SPLIT}_${RUN_ID}/predictions.MISINFO"
 
 echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
 python gpu/free_gpus.py -i ${MISINFO_GPUS}
