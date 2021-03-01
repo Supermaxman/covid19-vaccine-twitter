@@ -26,8 +26,8 @@ MISINFO_TRAIN_EPOCHS=10
 MISINFO_EVAL_BATCH_SIZE=4
 
 MISINFO_NUM_GPUS=1
-MISINFO_TRAIN=true
-MISINFO_RUN=true
+MISINFO_TRAIN=false
+MISINFO_RUN=false
 MISINFO_EVAL=true
 
 export TOKENIZERS_PARALLELISM=true
@@ -133,6 +133,7 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       --threshold_min ${MISINFO_THRESHOLD_MIN} \
       --threshold_max ${MISINFO_THRESHOLD_MAX} \
       --threshold_step ${MISINFO_THRESHOLD_STEP} \
+      --threshold 0.6 \
       > ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt \
       ; \
       tail -n 1 ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt
