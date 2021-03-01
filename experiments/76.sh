@@ -6,7 +6,7 @@ RUN_ID=${filename::-3}
 RUN_NAME=HLTRI_COVID_MISINFO
 
 # collection
-DATASET=v2
+DATASET=v1
 
 # major hyper-parameters for system
 MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
@@ -27,8 +27,8 @@ MISINFO_TRAIN_EPOCHS=10
 MISINFO_EVAL_BATCH_SIZE=12
 
 MISINFO_NUM_GPUS=1
-MISINFO_TRAIN=false
-MISINFO_RUN=false
+MISINFO_TRAIN=true
+MISINFO_RUN=true
 MISINFO_EVAL=true
 
 export TOKENIZERS_PARALLELISM=true
@@ -63,8 +63,8 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --model_type ${MISINFO_MODEL_TYPE} \
       --losses ${MISINFO_LOSSES} \
       --emb_size ${MISINFO_EMB_SIZE} \
-      --train_misinfo_path ${DATASET_PATH}/train_misinfo.json \
-      --val_misinfo_path ${DATASET_PATH}/dev_misinfo.json \
+      --train_misinfo_path ${DATASET_PATH}/misinfo.json \
+      --val_misinfo_path ${DATASET_PATH}/misinfo.json \
       --train_path ${DATASET_PATH}/train.jsonl \
       --val_path ${DATASET_PATH}/dev.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
@@ -84,7 +84,7 @@ if [[ ${MISINFO_RUN} = true ]]; then
       --model_type ${MISINFO_MODEL_TYPE} \
       --losses ${MISINFO_LOSSES} \
       --emb_size ${MISINFO_EMB_SIZE} \
-      --misinfo_path ${DATASET_PATH}/dev_misinfo.json \
+      --misinfo_path ${DATASET_PATH}/misinfo.json \
       --val_path ${DATASET_PATH}/dev.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
@@ -103,7 +103,7 @@ if [[ ${MISINFO_RUN} = true ]]; then
       --model_type ${MISINFO_MODEL_TYPE} \
       --losses ${MISINFO_LOSSES} \
       --emb_size ${MISINFO_EMB_SIZE} \
-      --misinfo_path ${DATASET_PATH}/test_misinfo.json \
+      --misinfo_path ${DATASET_PATH}/misinfo.json \
       --val_path ${DATASET_PATH}/test.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
@@ -127,7 +127,7 @@ if [[ ${MISINFO_EVAL} = true ]]; then
     python identify/score_predict.py \
       --train_path ${DATASET_PATH}/dev.jsonl \
       --val_path ${DATASET_PATH}/test.jsonl \
-      --misinfo_path ${DATASET_PATH}/test_misinfo.json \
+      --misinfo_path ${DATASET_PATH}/misinfo.json \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
       --train_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/dev_scores.json \
       --val_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json \
@@ -139,5 +139,4 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       ; \
       tail -n 1 ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt
 fi
-
 
