@@ -101,6 +101,26 @@ if __name__ == '__main__':
 				force_max_seq_len=args.use_tpus,
 			)
 		)
+	elif train_sampling == 'pairwise-emb':
+		val_dataset = MisinfoPairwiseEmbDataset(
+			documents=val_data,
+			tokenizer=tokenizer,
+			misinfo=misinfo,
+			all_misinfo=True
+		)
+		val_data_loader = DataLoader(
+			val_dataset,
+			num_workers=num_workers,
+			shuffle=False,
+			batch_size=args.eval_batch_size,
+			collate_fn=MisinfoPairwiseEmbBatchCollator(
+				misinfo,
+				tokenizer,
+				args.max_seq_len,
+				all_misinfo=True,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
 	else:
 		val_dataset = MisinfoDataset(
 			documents=val_data,
@@ -152,6 +172,11 @@ if __name__ == '__main__':
 	elif model_type == 'lm-pairwise':
 		model = CovidTwitterPairwiseMisinfoModel(
 			**model_args
+		)
+	elif model_type == 'lm-pairwise-emb':
+		model = CovidTwitterPairwiseEmbMisinfoModel(
+			**model_args,
+			emb_size=args.emb_size
 		)
 	elif model_type == 'lm-static':
 		model = CovidTwitterStaticMisinfoModel(

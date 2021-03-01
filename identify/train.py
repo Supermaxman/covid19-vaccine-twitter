@@ -215,6 +215,26 @@ if __name__ == '__main__':
 			)
 		)
 		train_size = len(train_dataset)
+	elif train_sampling == 'pairwise-emb':
+		train_dataset = MisinfoPairwiseEmbDataset(
+			documents=train_data,
+			tokenizer=tokenizer,
+			misinfo=train_misinfo,
+			all_misinfo=False
+		)
+		train_data_loader = DataLoader(
+			train_dataset,
+			num_workers=num_workers,
+			batch_size=args.batch_size,
+			shuffle=True,
+			collate_fn=MisinfoPairwiseEmbBatchCollator(
+				train_misinfo,
+				tokenizer,
+				args.max_seq_len,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+		train_size = len(train_dataset)
 	else:
 		raise ValueError(f'Unknown sampling: {train_sampling}')
 	if train_sampling == 'pairwise':
@@ -230,6 +250,26 @@ if __name__ == '__main__':
 			shuffle=False,
 			batch_size=args.eval_batch_size,
 			collate_fn=MisinfoPairwiseBatchCollator(
+				val_misinfo,
+				tokenizer,
+				args.max_seq_len,
+				all_misinfo=True,
+				force_max_seq_len=args.use_tpus,
+			)
+		)
+	elif train_sampling == 'pairwise-emb':
+		val_dataset = MisinfoPairwiseEmbDataset(
+			documents=val_data,
+			tokenizer=tokenizer,
+			misinfo=val_misinfo,
+			all_misinfo=True
+		)
+		val_data_loader = DataLoader(
+			val_dataset,
+			num_workers=num_workers,
+			shuffle=False,
+			batch_size=args.eval_batch_size,
+			collate_fn=MisinfoPairwiseEmbBatchCollator(
 				val_misinfo,
 				tokenizer,
 				args.max_seq_len,
@@ -293,6 +333,11 @@ if __name__ == '__main__':
 	elif model_type == 'lm-pairwise':
 		model = CovidTwitterPairwiseMisinfoModel(
 			**model_args
+		)
+	elif model_type == 'lm-pairwise-emb':
+		model = CovidTwitterPairwiseEmbMisinfoModel(
+			**model_args,
+			emb_size=args.emb_size
 		)
 	elif model_type == 'lm-static':
 		model = CovidTwitterStaticMisinfoModel(

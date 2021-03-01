@@ -455,6 +455,44 @@ class CovidTwitterPairwiseMisinfoModel(BaseCovidTwitterMisinfoModel):
 		)
 
 
+class CovidTwitterPairwiseEmbMisinfoModel(CovidTwitterMisinfoModel):
+	def __init__(
+			self, *args, **kwargs
+	):
+		super().__init__(*args, **kwargs)
+
+		self.score_func = torch.nn.Sigmoid()
+
+	def forward(self, input_ids, attention_mask, token_type_ids, batch):
+		# [2 * bsize, seq_len, hidden_size]
+		outputs = self.bert(
+			input_ids,
+			attention_mask=attention_mask,
+			token_type_ids=token_type_ids
+		)
+		contextualized_embeddings = outputs[0]
+		# [2 * bsize, hidden_size]
+		lm_output = self._get_lm_output(contextualized_embeddings, attention_mask)
+		lm_output = self.f_dropout(lm_output)
+		num_misinfo = batch['num_misinfo']
+
+		# [bsize, hidden_size]
+		ex_features = lm_output[num_misinfo:]
+		# [bsize, emb_size]
+		ex_embs = F.normalize(self.ex_embedding_layer(ex_features), p=2, dim=-1)
+
+		# [bsize, hidden_size]
+		m_features = lm_output[:num_misinfo]
+		# [bsize, emb_size]
+		m_embs = F.normalize(self.m_embedding_layer(m_features), p=2, dim=-1)
+		# -1 to 1
+		# [bsize, emb_size] x [bsize, emb_size] -> [bsize, emb_size] -> [bsize]
+		scores = torch.sum(ex_embs * m_embs, dim=-1)
+		logits = scores * torch.clamp(torch.exp(self.temperature), min=-100.0, max=100.0)
+		# logits = scores / torch.exp(self.temperature)
+		return ex_embs, m_embs, logits, scores
+
+
 def get_device_id():
 	try:
 		device_id = dist.get_rank()
