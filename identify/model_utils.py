@@ -53,10 +53,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		if 'binary_loss' in self.losses:
 			self.bce_metric = torch.nn.BCEWithLogitsLoss(reduction='none')
 			self.bias = Parameter(torch.zeros(1, dtype=torch.float))
-			self.weight = Parameter(torch.ones(1, dtype=torch.float))
 			self.bias.requires_grad = True
-			self.weight.requires_grad = True
-			self.batch_log['binary_loss_weight'] = self.weight
 			self.batch_log['binary_loss_bias'] = self.bias
 
 	def _dim_loss(self, logits, labels_mask, dim):
@@ -101,7 +98,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 				loss += c_loss
 
 		if 'binary_loss' in self.losses:
-			binary_logits = (self.weight * logits) + self.bias
+			binary_logits = logits + self.bias
 			bce_loss = self.bce_metric(
 				binary_logits,
 				labels_mask
