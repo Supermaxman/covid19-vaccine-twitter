@@ -8,7 +8,7 @@ python preprocess/run_bert_score.py \
     --misinfo_path ${DATASET_PATH}/train_misinfo.json \
     --output_path ${DATASET_PATH}/train-bert-scores.json \
     --device cuda:0 \
-    --total_chunks 0 \
+    --total_chunks 1 \
     --batch_size 32
 
 python preprocess/run_bert_score.py \
@@ -16,7 +16,7 @@ python preprocess/run_bert_score.py \
     --misinfo_path ${DATASET_PATH}/dev_misinfo.json \
     --output_path ${DATASET_PATH}/dev-bert-scores.json \
     --device cuda:0 \
-    --total_chunks 0 \
+    --total_chunks 1 \
     --batch_size 32
 
 python preprocess/run_bert_score.py \
@@ -24,7 +24,7 @@ python preprocess/run_bert_score.py \
     --misinfo_path ${DATASET_PATH}/test_misinfo.json \
     --output_path ${DATASET_PATH}/test-bert-scores.json \
     --device cuda:0 \
-    --total_chunks 0 \
+    --total_chunks 1 \
     --batch_size 32
 
 python identify/score_predict.py \
