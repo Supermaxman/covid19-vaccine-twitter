@@ -14,6 +14,7 @@ MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
 MISINFO_THRESHOLD_MIN=0.00
 MISINFO_THRESHOLD_MAX=1.00
 MISINFO_THRESHOLD_STEP=0.0005
+MISINFO_THRESHOLD=0.995
 
 MISINFO_BATCH_SIZE=12
 MISINFO_MODEL_TYPE=lm-pairwise
@@ -137,15 +138,16 @@ if [[ ${MISINFO_EVAL} = true ]]; then
 #      ; \
 #      tail -n 1 ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt
     python identify/score_predict.py \
-      --train_path ${DATASET_PATH}/test.jsonl \
+      --train_path ${DATASET_PATH}/dev.jsonl \
       --val_path ${DATASET_PATH}/test.jsonl \
       --misinfo_path ${DATASET_PATH}/test_misinfo.json \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
-      --train_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json \
+      --train_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/dev_scores.json \
       --val_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json \
       --threshold_min ${MISINFO_THRESHOLD_MIN} \
       --threshold_max ${MISINFO_THRESHOLD_MAX} \
       --threshold_step ${MISINFO_THRESHOLD_STEP} \
+      --threshold ${MISINFO_THRESHOLD} \
       > ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt \
       ; \
       tail -n 1 ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt
