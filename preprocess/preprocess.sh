@@ -94,6 +94,7 @@ python preprocess/merge_candidates.py \
     --output_path data/unique-art-v1-candidates-bert-bm25-merged.jsonl
 
 
+mkdir artifacts/v1
 # code for merging annotations is in notebooks on GPU04
 # Train size: 3735, Dev size: 415, Test size: 1038
 python preprocess/create_split.py \
@@ -102,6 +103,7 @@ python preprocess/create_split.py \
     --test_size 0.2 \
     --dev_size 0.1
 
+mkdir artifacts/v2
 # Train size: 3637, Dev size: 387, Test size: 1164
 python preprocess/create_zero_split.py \
     --input_path data/unique-art-v1-annotated-bert-bm25-merged.jsonl \
@@ -109,3 +111,12 @@ python preprocess/create_zero_split.py \
     --misinfo_path data/misinfo.json \
     --dev_mids 8 \
     --test_mids 4,5,7
+
+mkdir artifacts/v3
+# Train size: 3070, Dev size: 679, Test size: 1439
+python preprocess/create_zero_split.py \
+    --input_path data/unique-art-v1-annotated-bert-bm25-merged.jsonl \
+    --output_path data/v3 \
+    --misinfo_path data/misinfo.json \
+    --dev_mids 2,10 \
+    --test_mids 1,4,5,7
