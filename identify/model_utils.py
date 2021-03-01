@@ -35,7 +35,6 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 		self.load_pretrained = load_pretrained
 		if self.predict_mode or self.load_pretrained:
-			print(f'predict_mode')
 			# no need to load pre-trained weights since we will be loading whole model's
 			# fine-tuned weights from checkpoint.
 			self.config = BertConfig.from_pretrained(
@@ -44,12 +43,10 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			)
 			self.bert = BertModel(self.config)
 		else:
-			print(f'from_pretrained')
 			self.bert = BertModel.from_pretrained(
 				pre_model_name,
 				cache_dir=torch_cache_dir
 			)
-			print(f'loaded')
 			self.config = self.bert.config
 		self.save_hyperparameters()
 		self.batch_log = {}
@@ -76,7 +73,6 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		return loss
 
 	def _loss(self, logits, labels):
-		print('_loss')
 		loss = None
 		labels_mask = labels.float()
 		if 'compare_loss' in self.losses:
@@ -114,7 +110,6 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		return loss
 
 	def _forward_step(self, batch, batch_nb):
-		print('_forward_step')
 		ex_embs, m_embs, logits, scores = self(
 			input_ids=batch['input_ids'],
 			attention_mask=batch['attention_mask'],
@@ -132,7 +127,6 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			return ex_embs, m_embs, scores
 
 	def training_step(self, batch, batch_nb):
-		print('training_step')
 		loss, scores = self._forward_step(batch, batch_nb)
 		self.log('train_loss', loss)
 		for log_name, log_value in self.batch_log.items():
@@ -149,7 +143,6 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		return self._eval_step(batch, batch_nb, 'val')
 
 	def _eval_step(self, batch, batch_nb, name):
-		print('_eval_step')
 		if not self.predict_mode:
 			loss, scores = self._forward_step(batch, batch_nb)
 			loss = loss.detach()
@@ -314,7 +307,6 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		self.batch_log['temperature'] = self.temperature
 
 	def forward(self, input_ids, attention_mask, token_type_ids, batch):
-		print(f'forward ({input_ids.shape}')
 		# [num_misinfo + bsize, seq_len, hidden_size]
 		outputs = self.bert(
 			input_ids,
