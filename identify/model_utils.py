@@ -53,6 +53,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 		if 'binary_loss' in self.losses:
 			self.bce_metric = torch.nn.BCEWithLogitsLoss(reduction='none')
 			self.bias = Parameter(torch.zeros(1, dtype=torch.float))
+			self.bias.requires_grad = True
 
 	def _dim_loss(self, logits, labels_mask, dim):
 		# non-positive logits are -1e9
@@ -304,6 +305,7 @@ class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 		# initialized value to exp(x) = 0.07
 		# self.temperature = Parameter(torch.log(torch.ones(1, dtype=torch.float) * 0.07))
 		self.temperature = Parameter(torch.log(torch.ones(1, dtype=torch.float) / 0.07))
+		self.temperature.requires_grad = True
 		self.batch_log['temperature'] = self.temperature
 
 	def forward(self, input_ids, attention_mask, token_type_ids, batch):
@@ -358,6 +360,7 @@ class CovidTwitterStaticMisinfoModel(BaseCovidTwitterMisinfoModel):
 			bias=False
 		)
 		self.bias = Parameter(torch.zeros(self.num_misinfo, dtype=torch.float))
+		self.bias.requires_grad = True
 		self.score_func = torch.nn.Sigmoid()
 
 	def forward(self, input_ids, attention_mask, token_type_ids, batch):

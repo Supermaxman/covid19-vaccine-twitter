@@ -432,60 +432,23 @@ class MisinfoPairwiseDataset(MisinfoDataset):
 			m_text,
 			ex['text']
 		)
-		p_ex['t_input_ids'] = p_ex['input_ids']
-		p_ex['t_token_type_ids'] = p_ex['token_type_ids']
-		p_ex['t_attention_mask'] = p_ex['attention_mask']
 		p_ex['input_ids'] = token_data['input_ids']
 		p_ex['token_type_ids'] = token_data['token_type_ids']
 		p_ex['attention_mask'] = token_data['attention_mask']
 		return p_ex
 
 
-class MisinfoPairwiseEmbDataset(MisinfoDataset):
+class MisinfoPairwiseEmbDataset(MisinfoPairwiseDataset):
 	def __init__(
-			self,
-			documents,
-			tokenizer,
-			misinfo,
-			all_misinfo=False
+			self, *args, **kwargs
 	):
-		super().__init__(documents, tokenizer, misinfo)
-		self.misinfo = misinfo
-		self.all_misinfo = all_misinfo
-		self.pairwise_examples = []
-		self.tokenizer = tokenizer
-		for ex in self.examples:
-			if all_misinfo:
-				misinfo_ids = set(misinfo.keys())
-			else:
-				misinfo_ids = (ex['m_pos_labels'].union(ex['m_neg_labels']))
-			for m_id in misinfo_ids:
-				if m_id not in misinfo:
-					continue
-				m_label = 0
-				if m_id in ex['m_pos_labels']:
-					m_label = 1
-				p_ex = self._create_example(ex, m_id, m_label)
-				self.pairwise_examples.append(p_ex)
-
-		random.shuffle(self.pairwise_examples)
+		super().__init__(*args, **kwargs)
 
 	def _create_example(self, ex, m_id, m_label):
 		p_ex = ex.copy()
 		p_ex['m_id'] = m_id
 		p_ex['labels'] = m_label
 		return p_ex
-
-	def __len__(self):
-		return len(self.pairwise_examples)
-
-	def __getitem__(self, idx):
-		if torch.is_tensor(idx):
-			idx = idx.tolist()
-
-		example = self.pairwise_examples[idx]
-
-		return example
 
 
 class MisinfoBatchCollator:
@@ -641,7 +604,7 @@ class MisinfoPairwiseEmbBatchCollator(MisinfoBatchCollator):
 		token_type_ids = torch.zeros([2 * batch_size, pad_seq_len], dtype=torch.long)
 
 		# [ex_count]
-		labels = torch.zeros([len(examples)], dtype=torch.long)
+		labels = torch.zeros([batch_size], dtype=torch.long)
 		if self.labeled:
 			for ex_idx, ex in enumerate(examples):
 				labels[ex_idx] = ex['labels']
@@ -649,15 +612,14 @@ class MisinfoPairwiseEmbBatchCollator(MisinfoBatchCollator):
 		ids = []
 		m_ids = []
 		for ex_idx, ex in enumerate(examples):
+			ids.append(ex['id'])
+			m_ids.append(ex['m_id'])
 			m_id = ex['m_id']
 			m = self.misinfo[m_id]
 			self.pad_and_apply(m['token_data']['input_ids'], input_ids, ex_idx)
 			self.pad_and_apply(m['token_data']['attention_mask'], attention_mask, ex_idx)
 			self.pad_and_apply(m['token_data']['token_type_ids'], token_type_ids, ex_idx)
-		for ex_idx, ex in enumerate(examples):
-			ids.append(ex['id'])
-			m_ids.append(ex['m_id'])
-			b_idx = len(examples) + ex_idx
+			b_idx = batch_size + ex_idx
 			self.pad_and_apply(ex['input_ids'], input_ids, b_idx)
 			self.pad_and_apply(ex['attention_mask'], attention_mask, b_idx)
 			self.pad_and_apply(ex['token_type_ids'], token_type_ids, b_idx)
@@ -665,8 +627,8 @@ class MisinfoPairwiseEmbBatchCollator(MisinfoBatchCollator):
 		batch = {
 			'id': ids,
 			'm_ids': m_ids,
-			'num_misinfo': len(examples),
-			'num_examples': len(examples),
+			'num_misinfo': batch_size,
+			'num_examples': batch_size,
 			'input_ids': input_ids,
 			'attention_mask': attention_mask,
 			'token_type_ids': token_type_ids,
