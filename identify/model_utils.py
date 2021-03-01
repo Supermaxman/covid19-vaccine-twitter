@@ -35,6 +35,7 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 		self.load_pretrained = load_pretrained
 		if self.predict_mode or self.load_pretrained:
+			print(f'predict_mode')
 			# no need to load pre-trained weights since we will be loading whole model's
 			# fine-tuned weights from checkpoint.
 			self.config = BertConfig.from_pretrained(
@@ -43,10 +44,12 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 			)
 			self.bert = BertModel(self.config)
 		else:
+			print(f'from_pretrained')
 			self.bert = BertModel.from_pretrained(
 				pre_model_name,
 				cache_dir=torch_cache_dir
 			)
+			print(f'loaded')
 			self.config = self.bert.config
 		self.save_hyperparameters()
 		self.batch_log = {}
