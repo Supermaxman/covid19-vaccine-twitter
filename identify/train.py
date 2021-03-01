@@ -119,7 +119,8 @@ if __name__ == '__main__':
 	elif train_sampling == 'all_misinfo':
 		train_dataset = MisinfoPositiveDataset(
 			documents=train_data,
-			tokenizer=tokenizer
+			tokenizer=tokenizer,
+			misinfo=train_misinfo
 		)
 		train_data_loader = DataLoader(
 			train_dataset,
@@ -138,7 +139,8 @@ if __name__ == '__main__':
 	elif train_sampling == 'neg_misinfo':
 		train_dataset = MisinfoPositiveDataset(
 			documents=train_data,
-			tokenizer=tokenizer
+			tokenizer=tokenizer,
+			misinfo=train_misinfo
 		)
 		train_data_loader = DataLoader(
 			train_dataset,
@@ -177,7 +179,8 @@ if __name__ == '__main__':
 	elif train_sampling == 'none':
 		train_dataset = MisinfoPositiveDataset(
 			documents=train_data,
-			tokenizer=tokenizer
+			tokenizer=tokenizer,
+			misinfo=train_misinfo
 		)
 		train_data_loader = DataLoader(
 			train_dataset,
