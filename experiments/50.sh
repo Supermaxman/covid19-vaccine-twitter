@@ -13,8 +13,8 @@ MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
 
 MISINFO_THRESHOLD_MIN=0.00
 MISINFO_THRESHOLD_MAX=1.00
-MISINFO_THRESHOLD_STEP=0.0005
-MISINFO_THRESHOLD=0.995
+MISINFO_THRESHOLD_STEP=0.0001
+#MISINFO_THRESHOLD=0.995
 
 MISINFO_BATCH_SIZE=8
 MISINFO_MODEL_TYPE=lm-pairwise
@@ -134,7 +134,6 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       --threshold_min ${MISINFO_THRESHOLD_MIN} \
       --threshold_max ${MISINFO_THRESHOLD_MAX} \
       --threshold_step ${MISINFO_THRESHOLD_STEP} \
-      --threshold ${MISINFO_THRESHOLD} \
       > ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt \
       ; \
       tail -n 1 ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt
