@@ -46,7 +46,7 @@ class CovidTwitterPairwiseGenerator(nn.Module):
 	def loss(self, logits, labels):
 		return self.loss_metric(
 			logits,
-			labels
+			labels.float()
 		)
 
 
@@ -128,6 +128,8 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 		self.generator = CovidTwitterPairwiseGenerator(self.config.hidden_size, self.config.hidden_dropout_prob)
 		self.discriminator = CovidTwitterPairwiseDiscriminator(self.config.hidden_size, self.config.hidden_dropout_prob)
 		self.d_rewards = None
+		self.d_baseline = None
+		self.d_ema = 0.9
 
 	def training_step(self, batch, batch_idx, optimizer_idx):
 		# [bsize], [bsize]
@@ -163,11 +165,19 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 
 		# train discriminator
 		if optimizer_idx == 1:
-			d_loss = self.discriminator.loss(d_probs, self.d_rewards)
+			if self.d_baseline is None:
+				self.d_baseline = self.d_rewards
+			d_reward = (self.d_rewards - self.d_baseline)
+			d_loss = self.discriminator.loss(d_probs, d_reward)
 			d_max = torch.max(d_probs)
 			d_loss = d_loss.mean()
+
+			self.d_baseline = self.d_ema * self.d_baseline + (1.0 - self.d_ema) * self.d_rewards
+
 			self.log('disc_loss', d_loss)
 			self.log('disc_max_prob', d_max)
+			self.log('disc_rewards', self.d_rewards)
+			self.log('disc_baseline', self.d_baseline)
 			return {
 				'loss': d_loss
 			}
