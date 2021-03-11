@@ -129,6 +129,7 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 		self.discriminator = CovidTwitterPairwiseDiscriminator(self.config.hidden_size, self.config.hidden_dropout_prob)
 		self.d_rewards = None
 		self.d_baseline = None
+		self.g_loss = None
 		self.d_ema = 0.99
 
 	def training_step(self, batch, batch_idx, optimizer_idx):
@@ -146,44 +147,49 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 		# [bsize]
 		labels = batch['labels']
 		# [bsize]
-		loss = self.generator.loss(logits, labels)
+		g_loss = self.generator.loss(logits, labels)
 		# train generator
 		if optimizer_idx == 0:
-
+			self.g_loss = g_loss.detach()
 			# d_scores is a probability distribution, therefore it acts as a weighted sum of losses.
 			# [bsize] * [bsize] = [bsize]
-			loss = loss * d_probs.detach()
+			g_loss = g_loss * d_probs.detach()
 			# [1]
-			loss = loss.sum()
+			g_loss = g_loss.sum()
 
-			self.log('train_loss', loss)
+			self.log('train_loss', g_loss)
 			return {
-				'loss': loss
+				'loss': g_loss
 			}
 
 		# train discriminator
 		if optimizer_idx == 1:
-			d_range = np.arange(
-				start=0.00,
-				stop=1.00,
-				step=0.01
-			).tolist()
-			d_max_metrics = self._get_max_metrics(scores, labels, name='train', threshold=d_range)
-			self.d_rewards = d_max_metrics['train_f1'].detach()
+			# d_range = np.arange(
+			# 	start=0.00,
+			# 	stop=1.00,
+			# 	step=0.01
+			# ).tolist()
+			# d_max_metrics = self._get_max_metrics(scores, labels, name='train', threshold=d_range)
+			# self.d_rewards = d_max_metrics['train_f1'].detach()
+			g_loss = g_loss.detach()
+			# difference in loss from single step
+			g_loss_diff = g_loss - self.g_loss
+			self.d_rewards = g_loss_diff
+
 			if self.d_baseline is None:
-				self.d_baseline = self.d_rewards
+				self.d_baseline = self.d_rewards.mean()
 			d_reward = (self.d_rewards - self.d_baseline)
 			d_loss = self.discriminator.loss(d_probs, d_reward)
 			d_max = torch.max(d_probs)
 			d_loss = d_loss.mean()
 
-			self.d_baseline = self.d_ema * self.d_baseline + (1.0 - self.d_ema) * self.d_rewards
+			self.d_baseline = self.d_ema * self.d_baseline + (1.0 - self.d_ema) * self.d_rewards.mean()
 
 			self.log('disc_loss', d_loss)
 			self.log('disc_max_prob', d_max)
 			self.log('disc_rewards', d_reward)
 			self.log('disc_baseline', self.d_baseline)
-			self.log('disc_threshold', d_max_metrics['train_threshold'])
+			# self.log('disc_threshold', d_max_metrics['train_threshold'])
 			return {
 				'loss': d_loss
 			}
