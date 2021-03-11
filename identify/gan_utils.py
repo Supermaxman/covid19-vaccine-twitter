@@ -82,9 +82,9 @@ class CovidTwitterPairwiseDiscriminator(nn.Module):
 
 	def loss(self, probs, rewards):
 		# distribute reward over probability distribution
-		r_rewards = probs.detach() * rewards
+		# r_rewards = probs.detach() * rewards
 		# reinforce each prob based on its proportion of reward
-		r_loss = -torch.log(probs + 1e-6) * r_rewards
+		r_loss = -torch.log(probs + 1e-6) * rewards
 
 		return r_loss
 
@@ -187,7 +187,7 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 
 			self.log('disc_loss', d_loss)
 			self.log('disc_max_prob', d_max)
-			self.log('disc_rewards', d_reward)
+			self.log('disc_rewards', d_reward.mean())
 			self.log('disc_baseline', self.d_baseline)
 			# self.log('disc_threshold', d_max_metrics['train_threshold'])
 			return {
