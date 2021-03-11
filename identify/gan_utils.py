@@ -163,7 +163,12 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 
 		# train discriminator
 		if optimizer_idx == 1:
-			d_max_metrics = self._get_max_metrics(scores, labels, name='train', threshold=[0.9999])
+			d_range = np.arange(
+				start=0.00,
+				stop=1.00,
+				step=0.01
+			).tolist()
+			d_max_metrics = self._get_max_metrics(scores, labels, name='train', threshold=d_range)
 			self.d_rewards = d_max_metrics['train_f1'].detach()
 			if self.d_baseline is None:
 				self.d_baseline = self.d_rewards
