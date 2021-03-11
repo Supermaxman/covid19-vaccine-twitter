@@ -334,6 +334,10 @@ if __name__ == '__main__':
 		model = CovidTwitterPairwiseMisinfoModel(
 			**model_args
 		)
+	elif model_type == 'lm-pairwise-gan':
+		model = CovidTwitterPairwiseGanMisinfoModel(
+			**model_args
+		)
 	elif model_type == 'lm-pairwise-emb':
 		model = CovidTwitterPairwiseEmbMisinfoModel(
 			**model_args,
