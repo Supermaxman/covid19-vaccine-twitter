@@ -129,7 +129,7 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 		self.discriminator = CovidTwitterPairwiseDiscriminator(self.config.hidden_size, self.config.hidden_dropout_prob)
 		self.d_rewards = None
 		self.d_baseline = None
-		self.d_ema = 0.95
+		self.d_ema = 0.99
 
 	def training_step(self, batch, batch_idx, optimizer_idx):
 		# [bsize], [bsize]
@@ -163,7 +163,7 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 
 		# train discriminator
 		if optimizer_idx == 1:
-			d_max_metrics = self._get_max_metrics(scores, labels, name='train', threshold=[0.1, 0.5, 0.9, 0.95, 0.99, 0.999])
+			d_max_metrics = self._get_max_metrics(scores, labels, name='train', threshold=[0.9999])
 			self.d_rewards = d_max_metrics['train_f1'].detach()
 			if self.d_baseline is None:
 				self.d_baseline = self.d_rewards
@@ -176,7 +176,7 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 
 			self.log('disc_loss', d_loss)
 			self.log('disc_max_prob', d_max)
-			self.log('disc_rewards', self.d_rewards)
+			self.log('disc_rewards', d_reward)
 			self.log('disc_baseline', self.d_baseline)
 			self.log('disc_threshold', d_max_metrics['train_threshold'])
 			return {
