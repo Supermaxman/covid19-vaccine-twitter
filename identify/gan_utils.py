@@ -14,14 +14,14 @@ import logging
 
 
 class CovidTwitterPairwiseGenerator(nn.Module):
-	def __init__(self, hidden_size):
+	def __init__(self, hidden_size, hidden_dropout_prob):
 		super().__init__()
 		self.cls_classification_layer = nn.Linear(
 			hidden_size,
 			1
 		)
 		self.f_dropout = nn.Dropout(
-			p=self.config.hidden_dropout_prob
+			p=hidden_dropout_prob
 		)
 		self.score_func = torch.nn.Sigmoid()
 		self.loss_metric = torch.nn.BCEWithLogitsLoss(reduction='none')
@@ -51,14 +51,14 @@ class CovidTwitterPairwiseGenerator(nn.Module):
 
 
 class CovidTwitterPairwiseDiscriminator(nn.Module):
-	def __init__(self, hidden_size):
+	def __init__(self, hidden_size, hidden_dropout_prob):
 		super().__init__()
 		self.cls_classification_layer = nn.Linear(
 			hidden_size,
 			1
 		)
 		self.f_dropout = nn.Dropout(
-			p=self.config.hidden_dropout_prob
+			p=hidden_dropout_prob
 		)
 		self.score_func = torch.nn.Softmax(dim=-1)
 
@@ -125,8 +125,8 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 			)
 			self.config = self.bert.config
 		self.save_hyperparameters()
-		self.generator = CovidTwitterPairwiseGenerator(self.config.hidden_size)
-		self.discriminator = CovidTwitterPairwiseDiscriminator(self.config.hidden_size)
+		self.generator = CovidTwitterPairwiseGenerator(self.config.hidden_size, self.config.hidden_dropout_prob)
+		self.discriminator = CovidTwitterPairwiseDiscriminator(self.config.hidden_size, self.config.hidden_dropout_prob)
 		self.d_rewards = None
 
 	def training_step(self, batch, batch_idx, optimizer_idx):
