@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import loggers as pl_loggers
 
 from model_utils import *
+from gan_utils import *
 from data_utils import *
 
 import torch
