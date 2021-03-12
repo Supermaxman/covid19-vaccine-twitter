@@ -178,7 +178,8 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 
 			if self.d_baseline is None:
 				self.d_baseline = self.d_rewards.mean()
-			d_reward = (self.d_rewards - self.d_baseline)
+			# d_reward = (self.d_rewards - self.d_baseline)
+			d_reward = self.d_rewards
 			d_loss = self.discriminator.loss(d_probs, d_reward)
 			d_max = torch.max(d_probs)
 			d_loss = d_loss.mean()
