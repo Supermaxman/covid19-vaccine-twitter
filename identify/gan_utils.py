@@ -174,7 +174,7 @@ class CovidTwitterPairwiseGanMisinfoModel(pl.LightningModule):
 			g_loss = g_loss.detach()
 			# difference in loss from single step
 			g_loss_diff = g_loss - self.g_loss
-			self.d_rewards = g_loss_diff
+			self.d_rewards = g_loss_diff * 1.0 / d_probs
 
 			if self.d_baseline is None:
 				self.d_baseline = self.d_rewards.mean()
