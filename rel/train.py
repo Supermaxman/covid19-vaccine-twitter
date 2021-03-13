@@ -103,6 +103,7 @@ if __name__ == '__main__':
 		num_workers=num_workers,
 		batch_size=args.batch_size,
 		shuffle=True,
+		drop_last=True,
 		collate_fn=MisinfoBatchCollator(
 			args.max_seq_len,
 			force_max_seq_len=args.use_tpus,
