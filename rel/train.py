@@ -199,7 +199,7 @@ if __name__ == '__main__':
 		trainer.fit(model, train_data_loader, val_data_loader)
 
 		device_id = get_device_id()
-		if device_id == 0 or '0' in device_id:
+		if device_id == 0 or (isinstance(device_id, str) and '0' in device_id):
 			logging.info(f'Saving checkpoint on device {device_id}...')
 			model.to('cpu')
 			torch.save(model.state_dict(), checkpoint_path)
