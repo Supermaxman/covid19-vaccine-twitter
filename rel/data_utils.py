@@ -367,7 +367,7 @@ class MisinfoDataset(Dataset):
 	def __len__(self):
 		return len(self.examples)
 
-	def worker_init_fn(self):
+	def worker_init_fn(self, _):
 		if self.generator is None or not self.shuffle:
 			self.generator = torch.Generator()
 			worker_info = torch.utils.data.get_worker_info()
