@@ -60,7 +60,7 @@ trap handler SIGINT
 
 if [[ ${MISINFO_TRAIN} = true ]]; then
     echo "Training misinfo model..."
-    python identify/train.py \
+    python rel/train.py \
       --emb_size ${MISINFO_EMB_SIZE} \
       --emb_model ${MISINFO_EMB_MODEL} \
       --train_misinfo_path ${DATASET_PATH}/misinfo.json \
