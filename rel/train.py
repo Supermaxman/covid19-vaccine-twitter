@@ -111,7 +111,7 @@ if __name__ == '__main__':
 	train_size = len(train_dataset)
 
 	val_dataset = MisinfoDataset(
-		documents=train_data,
+		documents=val_data,
 		tokenizer=tokenizer,
 		misinfo=val_misinfo,
 		pos_samples=1,
