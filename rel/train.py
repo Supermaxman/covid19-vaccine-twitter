@@ -29,6 +29,7 @@ if __name__ == '__main__':
 	parser.add_argument('-cd', '--torch_cache_dir', default=None)
 	parser.add_argument('-tpu', '--use_tpus', default=False, action='store_true')
 	parser.add_argument('-lr', '--learning_rate', default=5e-6, type=float)
+	parser.add_argument('-ga', '--gamma', default=0.5, type=float)
 	parser.add_argument('-gpu', '--gpus', default='0')
 	parser.add_argument('-lt', '--load_checkpoint', default=None)
 	parser.add_argument('-tmp', '--train_misinfo_path', default=None)
@@ -148,8 +149,9 @@ if __name__ == '__main__':
 		threshold=args.threshold,
 		emb_model=args.emb_model,
 		emb_size=args.emb_size,
+		gamma=args.gamma,
 		torch_cache_dir=args.torch_cache_dir,
-		load_pretrained=args.load_checkpoint is not None
+		load_pretrained=args.load_checkpoint is not None,
 	)
 
 	tokenizer.save_pretrained(save_directory)

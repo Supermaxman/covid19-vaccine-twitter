@@ -228,10 +228,11 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
 	def __init__(
-			self, emb_model, emb_size, *args, **kwargs
+			self, emb_model, emb_size, gamma, *args, **kwargs
 	):
 		super().__init__(*args, **kwargs)
 		self.emb_size = emb_size
+		self.gamma = gamma
 
 		self.f_dropout = nn.Dropout(
 			p=self.config.hidden_dropout_prob

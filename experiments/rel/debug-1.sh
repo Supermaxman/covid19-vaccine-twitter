@@ -24,6 +24,7 @@ MISINFO_MAX_SEQ_LEN=96
 MISINFO_EMB_SIZE=32
 MISINFO_EMB_MODEL=transd
 MISINFO_LEARNING_RATE=5e-4
+MISINFO_GAMMA=0.5
 MISINFO_TRAIN_EPOCHS=10
 MISINFO_EVAL_BATCH_SIZE=8
 
@@ -73,6 +74,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --batch_size ${MISINFO_BATCH_SIZE} \
       --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
       --learning_rate ${MISINFO_LEARNING_RATE} \
+      --gamma ${MISINFO_GAMMA} \
       --epochs ${MISINFO_TRAIN_EPOCHS} \
       --gpus ${MISINFO_TRAIN_GPUS}
 fi
