@@ -1,17 +1,11 @@
 
-import json
 import os
 import json
-from typing import Iterator
-
 import torch
-from torch.utils.data import Dataset, Sampler
+from torch.utils.data import Dataset
 from tqdm import tqdm
-import random
 from collections import defaultdict
 import numpy as np
-import string
-import spacy
 import pickle
 import zlib
 
@@ -221,87 +215,6 @@ def get_token_features(token):
 	return token_data
 
 
-class MisinfoBatchSampler(Sampler):
-	def __init__(self, dataset, pos_count: int, neg_count: int = 0, epoch_shuffle=True, seed=0):
-		super().__init__(dataset)
-		self.dataset = dataset
-		self.generator = None
-		self.epoch_shuffle = epoch_shuffle
-		self.seed = seed
-		self.m_pos_examples = defaultdict(list)
-		self.m_neg_examples = defaultdict(list)
-		self.m_ids = {}
-		for ex_idx in range(len(dataset)):
-			ex = dataset[ex_idx]
-			for m_id in ex['m_pos_labels']:
-				self.m_pos_examples[m_id].append(ex_idx)
-				if m_id not in self.m_ids:
-					self.m_ids[m_id] = len(self.m_ids)
-			for m_id in ex['m_neg_labels']:
-				self.m_neg_examples[m_id].append(ex_idx)
-				if m_id not in self.m_ids:
-					self.m_ids[m_id] = len(self.m_ids)
-
-		assert pos_count <= len(self.m_ids)
-		self.m_ids_list = list(self.m_ids.keys())
-		self.m_idxs = {m_idx: m_id for m_id, m_idx in self.m_ids.items()}
-		self.pos_count = pos_count
-		self.neg_count = neg_count
-		self.batch_size = self.pos_count + self.neg_count
-		self.total_pos_count = sum([len(x) for x in self.m_pos_examples.values()])
-		self.total_neg_count = sum([len(x) for x in self.m_neg_examples.values()])
-
-	def __iter__(self):
-		# create new generator if this is the first time, otherwise re-create same generator with same seed
-		# every time if we do not want to shuffle every epoch.
-		if self.generator is None or not self.epoch_shuffle:
-			self.generator = torch.Generator()
-			self.generator.manual_seed(self.seed)
-
-		batch = []
-		num_batches = self.total_pos_count // self.batch_size
-		for b_idx in range(num_batches):
-			m_idxs = self.sample_misinfo(self.pos_count, self.generator)
-			for m_idx in m_idxs:
-				m_id = self.m_idxs[m_idx]
-				ex_idx = self.sample_positive(m_id, self.generator)
-				batch.append(ex_idx)
-			yield batch
-			batch = []
-
-	def __len__(self):
-		return self.total_pos_count // self.batch_size
-
-	def sample_misinfo(self, m_count, generator):
-		m_s_indices = torch.randperm(
-			n=len(self.m_ids),
-			generator=generator
-		).tolist()[:m_count]
-		return m_s_indices
-
-	def sample_positive(self, m_id, generator):
-		pos_examples = self.m_pos_examples[m_id]
-		s_idx = torch.randint(
-			high=len(pos_examples),
-			size=(1,),
-			dtype=torch.int64,
-			generator=generator
-		).tolist()[0]
-		ex_idx = pos_examples[s_idx]
-		return ex_idx
-
-	def sample_negative(self, m_id, generator):
-		neg_examples = self.m_neg_examples[m_id]
-		s_idx = torch.randint(
-			high=len(neg_examples),
-			size=(1,),
-			dtype=torch.int64,
-			generator=generator
-		).tolist()[0]
-		ex_idx = neg_examples[s_idx]
-		return ex_idx
-
-
 class MisinfoDataset(Dataset):
 	def __init__(
 			self,
@@ -312,7 +225,6 @@ class MisinfoDataset(Dataset):
 			neg_samples=1,
 			shuffle=False
 	):
-		self.generator = None
 		self.shuffle = shuffle
 		self.misinfo = misinfo
 		self.neg_samples = neg_samples
@@ -367,15 +279,6 @@ class MisinfoDataset(Dataset):
 	def __len__(self):
 		return len(self.examples)
 
-	def worker_init_fn(self, _):
-		if self.generator is None or not self.shuffle:
-			self.generator = torch.Generator()
-			worker_info = torch.utils.data.get_worker_info()
-			if worker_info is None:
-				self.generator.manual_seed(0)
-			else:
-				self.generator.manual_seed(worker_info.seed)
-
 	def __getitem__(self, idx):
 		if torch.is_tensor(idx):
 			idx = idx.tolist()
@@ -410,8 +313,7 @@ class MisinfoDataset(Dataset):
 		if m_count <= 0:
 			return samples
 		m_s_indices = torch.randperm(
-			n=len(m_examples),
-			generator=self.generator
+			n=len(m_examples)
 		).tolist()[:m_count]
 		for s_idx in m_s_indices:
 			samples.append(m_examples[s_idx])
@@ -419,8 +321,7 @@ class MisinfoDataset(Dataset):
 
 	def _sample_subj_obj(self):
 		r = torch.rand(
-			size=(1,),
-			generator=self.generator
+			size=(1,)
 		).tolist()[0]
 		if r < 0.5:
 			return 0
