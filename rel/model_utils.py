@@ -71,6 +71,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 	def forward(self, batch):
 		num_examples = batch['num_examples']
 		num_sequences_per_example = batch['num_sequences_per_example']
+		num_entities = num_sequences_per_example - 1
 		pad_seq_len = batch['pad_seq_len']
 
 		# [bsize, num_seq, seq_len] -> [bsize * num_seq, seq_len]
@@ -87,14 +88,22 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		# [bsize * num_seq, hidden_size]
 		lm_output = contextualized_embeddings[:, 0]
 		lm_output = self.f_dropout(lm_output)
-		ex_embs = self.emb_model(lm_output)
+		lm_output = lm_output.view(num_examples, num_sequences_per_example, self.config.hidden_size)
+		# [bsize, hidden_size]
+		r_lm_output = lm_output[:, 0]
+		# [bsize * num_entities, hidden_size]
+		e_lm_output = lm_output[:, 1:].view(num_examples * num_entities, self.config.hidden_size)
+		e_embs = self.emb_model(e_lm_output, 'entity')
+		# [bsize, num_entities, emb_size]
+		e_embs = e_embs.view(num_examples, num_entities, self.emb_size)
+		# [bsize, emb_size]
+		r_embs = self.emb_model(r_lm_output, 'entity')
 		# [bsize, num_seq, emb_size]
-		ex_embs = ex_embs.view(num_examples, num_sequences_per_example, self.emb_size)
-		return ex_embs
+		return e_embs, r_embs
 
-	def _triplet_energy(self, ex_embs, batch):
+	def _triplet_energy(self, e_embs, m_embs, batch):
 		# all [bsize, emb_size], [bsize, emb_size], [bsize, pos_samples, emb_size], [bsize, neg_samples, emb_size]
-		t_ex_embs, m_embs, pos_embs, neg_embs = self._split_embeddings(ex_embs, batch)
+		t_ex_embs, pos_embs, neg_embs = self._split_embeddings(e_embs, batch)
 		# [bsize, 1, emb_size]
 		t_ex_embs = t_ex_embs.unsqueeze(dim=-2)
 		m_embs = m_embs.unsqueeze(dim=-2)
@@ -116,18 +125,17 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 
 	def _split_embeddings(self, embs, batch):
 		t_ex_embs = embs[:, 0]
-		m_embs = embs[:, 1]
 		pos_samples = batch['pos_samples']
 		if pos_samples > 0:
-			pos_embs = embs[:, 2:2+pos_samples]
+			pos_embs = embs[:, 1:1+pos_samples]
 		else:
 			pos_embs = None
 		neg_samples = batch['neg_samples']
 		if neg_samples > 0:
-			neg_embs = embs[:, 2+pos_samples:2+pos_samples+neg_samples]
+			neg_embs = embs[:, 1+pos_samples:1+pos_samples+neg_samples]
 		else:
 			neg_embs = None
-		return t_ex_embs, m_embs, pos_embs, neg_embs
+		return t_ex_embs, pos_embs, neg_embs
 
 	def _loss(self, pos_energy, neg_energy, subj_obj_mask):
 		# first randomly pick between subject and object losses
@@ -142,15 +150,14 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		return loss, accuracy
 
 	def _triplet_step(self, batch):
-		ex_embs = self(batch)
-		pos_energy, neg_energy = self._triplet_energy(ex_embs, batch)
+		e_embs, r_embs = self(batch)
+		pos_energy, neg_energy = self._triplet_energy(e_embs, r_embs, batch)
 		loss, accuracy = self._loss(pos_energy, neg_energy, batch['subj_obj_mask'])
 		return loss, accuracy
 
 	def _label_step(self, batch):
-		ex_embs = self(batch)
-		t_ex_embs = ex_embs[:, 0]
-		m_embs = ex_embs[:, 1]
+		e_embs, m_embs = self(batch)
+		t_ex_embs = e_embs[:, 0]
 		return t_ex_embs, m_embs
 
 	def training_step(self, batch, batch_nb):
@@ -367,17 +374,32 @@ class TransDEmbedding(nn.Module):
 			hidden_size,
 			self.td_emb_size
 		)
+		self.r_emb_layer = nn.Linear(
+			hidden_size,
+			self.td_emb_size
+		)
+		self.r_proj_layer = nn.Linear(
+			hidden_size,
+			self.td_emb_size
+		)
 
-	def forward(self, source_embeddings):
-		# [bsize * num_seq, emb_size]
-		ex_embs = self.e_emb_layer(source_embeddings)
+	def forward(self, source_embeddings, emb_type):
+		if emb_type == 'entity':
+			# [bsize * num_seq, emb_size]
+			ex_embs = self.e_emb_layer(source_embeddings)
+			ex_projs = self.e_proj_layer(source_embeddings)
+		elif emb_type == 'rel':
+			# [bsize * num_seq, emb_size]
+			ex_embs = self.r_emb_layer(source_embeddings)
+			ex_projs = self.r_proj_layer(source_embeddings)
+		else:
+			raise ValueError(f'Unknown emb type: {emb_type}')
 		# https://www.aclweb.org/anthology/P15-1067.pdf
 		# normalize all lookups to max l2 norm of 1
 		ex_emb_norms = torch.norm(ex_embs, p=2, dim=-1, keepdim=True)
 		# [bsize * num_seq, emb_size]
 		ex_embs = ex_embs / torch.clamp(ex_emb_norms, max=1.0)
 
-		ex_projs = self.e_proj_layer(source_embeddings)
 		ex_embs = torch.cat([ex_embs, ex_projs], dim=-1)
 		return ex_embs
 

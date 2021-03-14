@@ -392,7 +392,7 @@ class MisinfoBatchCollator:
 			ids.append(ex['t_ex']['id'])
 			m_ids.append(ex['m_ex']['m_id'])
 			labels.append(ex['label'])
-			ex_seqs = [ex['t_ex'], ex['m_ex']] + ex['p_samples'] + ex['n_samples']
+			ex_seqs = [ex['m_ex'], ex['t_ex']] + ex['p_samples'] + ex['n_samples']
 			subj_obj_mask[ex_idx, ex['subj_obj_sample']] = 1.0
 			for seq_idx, seq in enumerate(ex_seqs):
 				self.pad_and_apply(seq['token_data']['input_ids'], input_ids, ex_idx, seq_idx)
