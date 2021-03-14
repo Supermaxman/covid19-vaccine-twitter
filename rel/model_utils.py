@@ -97,7 +97,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		# [bsize, num_entities, emb_size]
 		e_embs = e_embs.view(num_examples, num_entities, self.emb_size)
 		# [bsize, emb_size]
-		r_embs = self.emb_model(r_lm_output, 'entity')
+		r_embs = self.emb_model(r_lm_output, 'rel')
 		# [bsize, num_seq, emb_size]
 		return e_embs, r_embs
 
