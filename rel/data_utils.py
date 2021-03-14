@@ -286,6 +286,8 @@ class MisinfoDataset(Dataset):
 				else:
 					# "soft" negatives created here
 					self.neg_examples[m_id].append(t_ex)
+					if self.neg_labels:
+						self.examples.append((t_ex, m_ex, 0))
 
 	def __len__(self):
 		return len(self.examples)
