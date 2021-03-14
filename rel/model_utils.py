@@ -187,7 +187,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			m_ids = []
 			m_scores = []
 
-			for b_idx, b_id in enumerate(batch['id']):
+			for b_idx, b_id in enumerate(batch['ids']):
 				for m_idx, m_id in enumerate(batch['m_ids']):
 					m_score = scores[b_idx, m_idx].item()
 					ids.append(b_id)
@@ -195,13 +195,13 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 					m_scores.append(m_score)
 
 			ex_dict = {
-				'id': ids,
+				'ids': ids,
 				'm_id': m_ids,
 				'm_score': m_scores,
 			}
 		else:
 			ex_dict = {
-				'id': batch['id'],
+				'ids': batch['ids'],
 				'm_id': batch['m_ids'],
 				'm_score': scores.tolist()
 			}
@@ -210,7 +210,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			filename=os.path.join(self.predict_path, f'predictions-{device_id}.pt')
 		)
 		result = {
-			f'{name}_id': batch['id'],
+			f'{name}_ids': batch['ids'],
 			f'{name}_m_ids': batch['m_ids'],
 			f'{name}_scores': scores,
 		}

@@ -397,7 +397,7 @@ class MisinfoBatchCollator:
 				self.pad_and_apply(seq['token_data']['attention_mask'], attention_mask, ex_idx, seq_idx)
 				self.pad_and_apply(seq['token_data']['token_type_ids'], token_type_ids, ex_idx, seq_idx)
 		batch = {
-			'id': ids,
+			'ids': ids,
 			'm_ids': m_ids,
 			'num_examples': num_examples,
 			'pos_samples': pos_samples,
