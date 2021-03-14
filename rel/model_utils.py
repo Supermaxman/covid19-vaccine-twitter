@@ -262,11 +262,13 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			m_ids = [m_id for x in label_eval_outputs for m_id in x[f'{name}_m_ids']]
 			# collect all positive examples under each misinfo and take average embedding
 			m_ex_embs_list = defaultdict(list)
+			default_m_ex_emb = None
 			for ex_emb, m_label, m_id in zip(ex_embs, labels, m_ids):
 				if m_label > 0:
 					m_ex_embs_list[m_id].append(ex_emb)
+				if default_m_ex_emb is None:
+					default_m_ex_emb = torch.zeros_like(ex_emb)
 			m_ex_avg_embs = {}
-			default_m_ex_emb = None
 			for m_id, m_exs in m_ex_embs_list.items():
 				# average embedding for positive examples for m_id
 				# [emb_size]
@@ -275,8 +277,6 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				# else:
 				m_ex_emb = torch.stack(m_exs, dim=0).mean(dim=0)
 				m_ex_avg_embs[m_id] = m_ex_emb
-				if default_m_ex_emb is None:
-					default_m_ex_emb = torch.zeros_like(m_ex_emb)
 
 			# unroll avg embeddings across batch for easier calculation
 			m_ex_embs = []
