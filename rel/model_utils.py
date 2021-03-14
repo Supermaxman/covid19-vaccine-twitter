@@ -286,6 +286,9 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			# [bsize, emb_size]
 			m_ex_embs = torch.stack(m_ex_embs, dim=0)
 			# max energy is inf, min energy is 0
+			print(f'ex_embs={ex_embs.shape}')
+			print(f'm_embs={m_embs.shape}')
+			print(f'm_ex_embs={m_ex_embs.shape}')
 			m_ex_energies = self.emb_model.energy(ex_embs, m_embs, m_ex_embs)
 			# max score is 0, min score is -inf
 			# [bsize]
