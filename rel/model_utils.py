@@ -260,7 +260,10 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			labels = torch.cat([x[f'{name}_labels'] for x in label_eval_outputs], dim=0)
 			ex_ids = [ex_id for x in label_eval_outputs for ex_id in x[f'{name}_ids']]
 			m_ids = [m_id for x in label_eval_outputs for m_id in x[f'{name}_m_ids']]
-
+			print(f'ex_embs={ex_embs.shape}')
+			print(f'labels={labels.shape}')
+			print(f'ex_ids={len(ex_ids)}')
+			print(f'm_ids={len(m_ids)}')
 			# collect all positive examples under each misinfo and take average embedding
 			m_ex_embs_list = defaultdict(list)
 			for ex_emb, m_label, m_id in zip(ex_embs, labels, m_ids):
