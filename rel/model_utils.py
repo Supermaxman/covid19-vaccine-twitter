@@ -244,59 +244,61 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		return result
 
 	def _eval_epoch_end(self, outputs, name):
-		# triplet eval
-		loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0)
-		accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in outputs], dim=0)
-		loss = loss.mean()
-		accuracy = accuracy.mean()
-		self.log(f'{name}_loss', loss)
-		self.log(f'{name}_accuracy', accuracy)
+		if isinstance(outputs, list) and name == 'val':
+			triplet_eval_outputs, label_eval_outputs = outputs
+			# triplet eval is dataloader_idx 0
+			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in triplet_eval_outputs], dim=0)
+			accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in triplet_eval_outputs], dim=0)
+			loss = loss.mean()
+			accuracy = accuracy.mean()
+			self.log(f'{name}_loss', loss)
+			self.log(f'{name}_accuracy', accuracy)
 
-		# label eval
-		ex_embs = torch.cat([x[f'{name}_ex_embs'] for x in outputs], dim=0)
-		m_embs = torch.cat([x[f'{name}_m_embs'] for x in outputs], dim=0)
-		labels = torch.cat([x[f'{name}_labels'] for x in outputs], dim=0)
-		ex_ids = [ex_id for x in outputs for ex_id in x[f'{name}_ids']]
-		m_ids = [m_id for x in outputs for m_id in x[f'{name}_m_ids']]
+			# label eval is dataloader_idx 1
+			ex_embs = torch.cat([x[f'{name}_ex_embs'] for x in label_eval_outputs], dim=0)
+			m_embs = torch.cat([x[f'{name}_m_embs'] for x in label_eval_outputs], dim=0)
+			labels = torch.cat([x[f'{name}_labels'] for x in label_eval_outputs], dim=0)
+			ex_ids = [ex_id for x in label_eval_outputs for ex_id in x[f'{name}_ids']]
+			m_ids = [m_id for x in label_eval_outputs for m_id in x[f'{name}_m_ids']]
 
-		# collect all positive examples under each misinfo and take average embedding
-		m_ex_embs_list = defaultdict(list)
-		for ex_emb, m_label, m_id in zip(ex_embs, labels, m_ids):
-			if m_label > 0:
-				m_ex_embs_list[m_id].append(ex_emb)
-		m_ex_avg_embs = {}
-		for m_id, m_exs in m_ex_embs_list.items():
-			# average embedding for positive examples for m_id
-			# [emb_size]
-			m_ex_avg_embs[m_id] = torch.cat(m_exs, dim=0).mean(keepdim=True)
+			# collect all positive examples under each misinfo and take average embedding
+			m_ex_embs_list = defaultdict(list)
+			for ex_emb, m_label, m_id in zip(ex_embs, labels, m_ids):
+				if m_label > 0:
+					m_ex_embs_list[m_id].append(ex_emb)
+			m_ex_avg_embs = {}
+			for m_id, m_exs in m_ex_embs_list.items():
+				# average embedding for positive examples for m_id
+				# [emb_size]
+				m_ex_avg_embs[m_id] = torch.cat(m_exs, dim=0).mean(keepdim=True)
 
-		# unroll avg embeddings across batch for easier calculation
-		m_ex_embs = []
-		for ex_emb, m_emb, m_label, ex_id, m_id in zip(ex_embs, m_embs, labels, ex_ids, m_ids):
-			m_ex_emb = m_ex_avg_embs[m_id]
-			m_ex_embs.append(m_ex_emb)
-		# [bsize, emb_size]
-		m_ex_embs = torch.stack(m_ex_embs, dim=0)
-		# max energy is inf, min energy is 0
-		m_ex_energies = self.emb_model.energy(ex_embs, m_embs, m_ex_embs)
-		# max score is 0, min score is -inf
-		# [bsize]
-		scores = -m_ex_energies
-		threshold_range = np.arange(
-			start=-10.00,
-			stop=0.00,
-			step=0.01
-		)
-		f1, p, r, threshold = metric_utils.compute_threshold_f1(
-			scores,
-			labels,
-			self.threshold,
-			threshold_range
-		)
-		self.log(f'{name}_f1', f1)
-		self.log(f'{name}_p', p)
-		self.log(f'{name}_r', r)
-		self.log(f'{name}_threshold', threshold)
+			# unroll avg embeddings across batch for easier calculation
+			m_ex_embs = []
+			for ex_emb, m_emb, m_label, ex_id, m_id in zip(ex_embs, m_embs, labels, ex_ids, m_ids):
+				m_ex_emb = m_ex_avg_embs[m_id]
+				m_ex_embs.append(m_ex_emb)
+			# [bsize, emb_size]
+			m_ex_embs = torch.stack(m_ex_embs, dim=0)
+			# max energy is inf, min energy is 0
+			m_ex_energies = self.emb_model.energy(ex_embs, m_embs, m_ex_embs)
+			# max score is 0, min score is -inf
+			# [bsize]
+			scores = -m_ex_energies
+			threshold_range = np.arange(
+				start=-10.00,
+				stop=0.00,
+				step=0.01
+			)
+			f1, p, r, threshold = metric_utils.compute_threshold_f1(
+				scores,
+				labels,
+				self.threshold,
+				threshold_range
+			)
+			self.log(f'{name}_f1', f1)
+			self.log(f'{name}_p', p)
+			self.log(f'{name}_r', r)
+			self.log(f'{name}_threshold', threshold)
 
 	def validation_epoch_end(self, outputs):
 		if not self.predict_mode:
