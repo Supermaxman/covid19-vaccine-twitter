@@ -1,3 +1,4 @@
+from collections import defaultdict
 
 import pytorch_lightning as pl
 from transformers import BertModel, BertConfig
@@ -12,10 +13,13 @@ import os
 import math
 import logging
 
+import metric_utils
 
-class BaseCovidTwitterMisinfoModel(pl.LightningModule):
+
+class CovidTwitterMisinfoModel(pl.LightningModule):
 	def __init__(
-			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, threshold=None,
+			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, emb_model, emb_size, gamma,
+			threshold=None,
 			torch_cache_dir=None, predict_mode=False, predict_path=None, load_pretrained=False
 	):
 		super().__init__()
@@ -47,151 +51,260 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 				cache_dir=torch_cache_dir
 			)
 			self.config = self.bert.config
-		self.save_hyperparameters()
-		self.batch_log = {}
 
-	def _forward_step(self, batch):
-		t_ex_embs, m_embs, pos_energy, neg_energy, rel_energy = self(batch)
-		scores = -rel_energy
-		if not self.predict_mode:
-			loss, accuracy = self.loss(pos_energy, neg_energy, batch['subj_obj_mask'])
+		self.emb_size = emb_size
+		self.gamma = gamma
 
-			return loss, accuracy, scores
+		self.f_dropout = nn.Dropout(
+			p=self.config.hidden_dropout_prob
+		)
+		if emb_model == 'transd':
+			self.emb_model = TransDEmbedding(
+				self.config.hidden_size,
+				self.emb_size
+			)
 		else:
-			return t_ex_embs, m_embs, scores
+			raise ValueError(f'Unknown embedding model: {emb_model}')
+
+		self.save_hyperparameters()
+
+	def forward(self, batch):
+		num_examples = batch['num_examples']
+		num_sequences_per_example = batch['num_sequences_per_example']
+		pad_seq_len = batch['pad_seq_len']
+
+		# [bsize, num_seq, seq_len] -> [bsize * num_seq, seq_len]
+		input_ids = batch['input_ids'].view(num_examples * num_sequences_per_example, pad_seq_len)
+		attention_mask = batch['attention_mask'].view(num_examples * num_sequences_per_example, pad_seq_len)
+		token_type_ids = batch['token_type_ids'].view(num_examples * num_sequences_per_example, pad_seq_len)
+
+		# [bsize * num_seq, seq_len, hidden_size]
+		contextualized_embeddings = self.bert(
+			input_ids,
+			attention_mask=attention_mask,
+			token_type_ids=token_type_ids
+		)[0]
+		# [bsize * num_seq, hidden_size]
+		lm_output = contextualized_embeddings[:, 0]
+		lm_output = self.f_dropout(lm_output)
+		ex_embs = self.emb_model(lm_output)
+		# [bsize, num_seq, emb_size]
+		ex_embs = ex_embs.view(num_examples, num_sequences_per_example, self.emb_size)
+		return ex_embs
+
+	def _triplet_energy(self, ex_embs, batch):
+		# all [bsize, emb_size], [bsize, emb_size], [bsize, pos_samples, emb_size], [bsize, neg_samples, emb_size]
+		t_ex_embs, m_embs, pos_embs, neg_embs = self._split_embeddings(ex_embs, batch)
+		# [bsize, 1, emb_size]
+		t_ex_embs = t_ex_embs.unsqueeze(dim=-2)
+		m_embs = m_embs.unsqueeze(dim=-2)
+
+		# [bsize]
+		pos_subj_energy = self.emb_model.energy(t_ex_embs, m_embs, pos_embs)
+		# [bsize]
+		pos_obj_energy = self.emb_model.energy(pos_embs, m_embs, t_ex_embs)
+		# [bsize, 2]
+		pos_energy = torch.stack([pos_subj_energy, pos_obj_energy], dim=-1)
+		# [bsize]
+		neg_subj_energy = self.emb_model.energy(t_ex_embs, m_embs, neg_embs)
+		# [bsize]
+		neg_obj_energy = self.emb_model.energy(neg_embs, m_embs, t_ex_embs)
+		# [bsize, 2]
+		neg_energy = torch.stack([neg_subj_energy, neg_obj_energy], dim=-1)
+
+		return pos_energy, neg_energy
+
+	def _split_embeddings(self, embs, batch):
+		t_ex_embs = embs[:, 0]
+		m_embs = embs[:, 1]
+		pos_samples = batch['pos_samples']
+		if pos_samples > 0:
+			pos_embs = embs[:, 2:2+pos_samples]
+		else:
+			pos_embs = None
+		neg_samples = batch['neg_samples']
+		if neg_samples > 0:
+			neg_embs = embs[:, 2+pos_samples:2+pos_samples+neg_samples]
+		else:
+			neg_embs = None
+		return t_ex_embs, m_embs, pos_embs, neg_embs
+
+	def _loss(self, pos_energy, neg_energy, subj_obj_mask):
+		# first randomly pick between subject and object losses
+		# [bsize]
+		pos_energy = (pos_energy * subj_obj_mask).sum(dim=-1)
+		# [bsize]
+		neg_energy = (neg_energy * subj_obj_mask).sum(dim=-1)
+		margin = pos_energy - neg_energy
+		loss = torch.clamp(self.gamma + margin, min=0.0)
+		accuracy = (pos_energy.lt(neg_energy)).float().mean()
+		loss = loss.mean()
+		return loss, accuracy
+
+	def _triplet_step(self, batch):
+		ex_embs = self(batch)
+		pos_energy, neg_energy = self._triplet_energy(ex_embs, batch)
+		loss, accuracy = self._loss(pos_energy, neg_energy, batch['subj_obj_mask'])
+		return loss, accuracy
+
+	def _label_step(self, batch):
+		ex_embs = self(batch)
+		t_ex_embs = ex_embs[:, 0]
+		m_embs = ex_embs[:, 1]
+		return t_ex_embs, m_embs
 
 	def training_step(self, batch, batch_nb):
-		loss, accuracy, scores = self._forward_step(batch)
+		loss, accuracy = self._triplet_step(batch)
 		self.log('train_loss', loss)
 		self.log('train_accuracy', accuracy)
-		for log_name, log_value in self.batch_log.items():
-			self.log(f'train_{log_name}', log_value)
 		result = {
 			'loss': loss
 		}
 		return result
 
 	def test_step(self, batch, batch_nb):
-		return self._eval_step(batch, batch_nb, 'test')
-
-	def validation_step(self, batch, batch_nb):
-		return self._eval_step(batch, batch_nb, 'val')
-
-	def _eval_step(self, batch, batch_nb, name):
-		if not self.predict_mode:
-			loss, accuracy, scores = self._forward_step(batch)
-			loss = loss.detach()
-			accuracy = accuracy.detach()
-			result = {
-				f'{name}_loss': loss,
-				f'{name}_batch_loss': loss,
-				f'{name}_batch_accuracy': accuracy,
-				# f'{name}_batch_scores': scores.detach(),
-				# f'{name}_batch_labels': batch['labels'].detach(),
-			}
-
-			return result
+		if self.predict_mode:
+			return self._predict_step(batch, 'test')
 		else:
-			# TODO
-			raise NotImplementedError()
-			ex_embs, m_embs, scores = self._forward_step(batch)
-			scores = scores.detach()
-			device_id = get_device_id()
-			if len(scores.shape) == 2:
-				ids = []
-				m_ids = []
-				m_scores = []
+			return self._triplet_eval_step(batch, 'test')
 
-				for b_idx, b_id in enumerate(batch['id']):
-					for m_idx, m_id in enumerate(batch['m_ids']):
-						m_score = scores[b_idx, m_idx].item()
-						ids.append(b_id)
-						m_ids.append(m_id)
-						m_scores.append(m_score)
+	def validation_step(self, batch, batch_nb, dataloader_idx):
+		if self.predict_mode:
+			return self._predict_step(batch, 'val')
+		else:
+			if dataloader_idx == 0:
+				return self._triplet_eval_step(batch, 'val')
+			elif dataloader_idx == 1:
+				return self._label_eval_step(batch, 'val')
 
-				ex_dict = {
-					'id': ids,
-					'm_id': m_ids,
-					'm_score': m_scores,
-				}
-			else:
-				ex_dict = {
-					'id': batch['id'],
-					'm_id': batch['m_ids'],
-					'm_score': scores.tolist()
-				}
-			self.write_prediction_dict(
-				ex_dict,
-				filename=os.path.join(self.predict_path, f'predictions-{device_id}.pt')
-			)
-			result = {
-				f'{name}_id': batch['id'],
-				f'{name}_m_ids': batch['m_ids'],
-				f'{name}_scores': scores,
+	def _predict_step(self, batch, name):
+		raise NotImplementedError()
+		ex_embs, m_embs = self._forward_step(batch)
+		scores = scores.detach()
+		device_id = get_device_id()
+		if len(scores.shape) == 2:
+			ids = []
+			m_ids = []
+			m_scores = []
+
+			for b_idx, b_id in enumerate(batch['id']):
+				for m_idx, m_id in enumerate(batch['m_ids']):
+					m_score = scores[b_idx, m_idx].item()
+					ids.append(b_id)
+					m_ids.append(m_id)
+					m_scores.append(m_score)
+
+			ex_dict = {
+				'id': ids,
+				'm_id': m_ids,
+				'm_score': m_scores,
 			}
+		else:
+			ex_dict = {
+				'id': batch['id'],
+				'm_id': batch['m_ids'],
+				'm_score': scores.tolist()
+			}
+		self.write_prediction_dict(
+			ex_dict,
+			filename=os.path.join(self.predict_path, f'predictions-{device_id}.pt')
+		)
+		result = {
+			f'{name}_id': batch['id'],
+			f'{name}_m_ids': batch['m_ids'],
+			f'{name}_scores': scores,
+		}
 
-			return result
+		return result
 
-	def _get_predictions(self, scores, threshold):
-		# normalize over
-		predictions = (scores.gt(threshold)).long()
-		return predictions
+	def _triplet_eval_step(self, batch, name):
+		loss, accuracy = self._triplet_step(batch)
+		loss = loss.detach()
+		accuracy = accuracy.detach()
+		result = {
+			f'{name}_loss': loss,
+			f'{name}_batch_loss': loss,
+			f'{name}_batch_accuracy': accuracy,
+		}
 
-	def _get_metrics(self, scores, labels, threshold, name):
-		metrics = {}
-		# [num_examples, num_misinfo]
-		predictions = self._get_predictions(scores, threshold)
-		# label is positive and predicted positive
-		i_tp = (predictions.eq(1).float() * labels.eq(1).float()).sum()
-		# label is not positive and predicted positive
-		i_fp = (predictions.eq(1).float() * labels.ne(1).float()).sum()
-		# label is positive and predicted negative
-		i_fn = (predictions.ne(1).float() * labels.eq(1).float()).sum()
-		i_precision = i_tp / (torch.clamp(i_tp + i_fp, 1.0))
-		i_recall = i_tp / torch.clamp(i_tp + i_fn, 1.0)
+		return result
 
-		i_f1 = 2.0 * (i_precision * i_recall) / (torch.clamp(i_precision + i_recall, 1.0))
-		metrics[f'{name}_f1'] = i_f1
-		metrics[f'{name}_p'] = i_precision
-		metrics[f'{name}_r'] = i_recall
-		metrics[f'{name}_threshold'] = threshold
-		return metrics
+	def _label_eval_step(self, batch, name):
+		ex_embs, m_embs = self._label_step(batch)
+		ex_embs = ex_embs.detach()
+		m_embs = m_embs.detach()
+		result = {
+			f'{name}_ex_embs': ex_embs,
+			f'{name}_m_embs': m_embs,
+			f'{name}_labels': batch['labels'].detach(),
+			f'{name}_ids': batch['ids'],
+			f'{name}_m_ids': batch['m_ids'],
+		}
+
+		return result
 
 	def _eval_epoch_end(self, outputs, name):
-		if not self.predict_mode:
-			# TODO
-			# scores = torch.cat([x[f'{name}_batch_scores'].flatten() for x in outputs], dim=0)
-			# labels = torch.cat([x[f'{name}_batch_labels'].flatten() for x in outputs], dim=0)
-			#
-			# if self.threshold is None:
-			# 	# cosine similarities between -1 and 1
-			# 	threshold_range = self._get_threshold_range()
-			# else:
-			# 	threshold_range = [self.threshold]
-			# max_metric = float('-inf')
-			# max_metrics = {}
-			# for threshold in threshold_range:
-			# 	t_metrics = self._get_metrics(scores, labels, threshold, name)
-			# 	m = t_metrics[f'{name}_f1']
-			# 	if m > max_metric:
-			# 		max_metric = m
-			# 		max_metrics = t_metrics
-			#
-			# for metric, value in max_metrics.items():
-			# 	self.log(metric, value)
+		# triplet eval
+		loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0)
+		accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in outputs], dim=0)
+		loss = loss.mean()
+		accuracy = accuracy.mean()
+		self.log(f'{name}_loss', loss)
+		self.log(f'{name}_accuracy', accuracy)
 
-			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in outputs], dim=0)
-			accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in outputs], dim=0)
-			loss = loss.mean()
-			accuracy = accuracy.mean()
-			self.log(f'{name}_loss', loss)
-			self.log(f'{name}_accuracy', accuracy)
+		# label eval
+		ex_embs = torch.cat([x[f'{name}_ex_embs'] for x in outputs], dim=0)
+		m_embs = torch.cat([x[f'{name}_m_embs'] for x in outputs], dim=0)
+		labels = torch.cat([x[f'{name}_labels'] for x in outputs], dim=0)
+		ex_ids = [ex_id for x in outputs for ex_id in x[f'{name}_ids']]
+		m_ids = [m_id for x in outputs for m_id in x[f'{name}_m_ids']]
+
+		# collect all positive examples under each misinfo and take average embedding
+		m_ex_embs_list = defaultdict(list)
+		for ex_emb, m_label, m_id in zip(ex_embs, labels, m_ids):
+			if m_label > 0:
+				m_ex_embs_list[m_id].append(ex_emb)
+		m_ex_avg_embs = {}
+		for m_id, m_exs in m_ex_embs_list.items():
+			# average embedding for positive examples for m_id
+			# [emb_size]
+			m_ex_avg_embs[m_id] = torch.cat(m_exs, dim=0).mean(keepdim=True)
+
+		# unroll avg embeddings across batch for easier calculation
+		m_ex_embs = []
+		for ex_emb, m_emb, m_label, ex_id, m_id in zip(ex_embs, m_embs, labels, ex_ids, m_ids):
+			m_ex_emb = m_ex_avg_embs[m_id]
+			m_ex_embs.append(m_ex_emb)
+		# [bsize, emb_size]
+		m_ex_embs = torch.stack(m_ex_embs, dim=0)
+		# max energy is inf, min energy is 0
+		m_ex_energies = self.emb_model.energy(ex_embs, m_embs, m_ex_embs)
+		# max score is 0, min score is -inf
+		# [bsize]
+		scores = -m_ex_energies
+		threshold_range = np.arange(
+			start=-10.00,
+			stop=0.00,
+			step=0.01
+		)
+		f1, p, r, threshold = metric_utils.compute_threshold_f1(
+			scores,
+			labels,
+			self.threshold,
+			threshold_range
+		)
+		self.log(f'{name}_f1', f1)
+		self.log(f'{name}_p', p)
+		self.log(f'{name}_r', r)
+		self.log(f'{name}_threshold', threshold)
 
 	def validation_epoch_end(self, outputs):
-		self._eval_epoch_end(outputs, 'val')
+		if not self.predict_mode:
+			self._eval_epoch_end(outputs, 'val')
 
 	def test_epoch_end(self, outputs):
-		self._eval_epoch_end(outputs, 'test')
+		if not self.predict_mode:
+			self._eval_epoch_end(outputs, 'test')
 
 	def configure_optimizers(self):
 		params = self._get_optimizer_params(self.weight_decay)
@@ -218,108 +331,6 @@ class BaseCovidTwitterMisinfoModel(pl.LightningModule):
 
 		return optimizer_params
 
-	def _get_threshold_range(self):
-		return np.arange(
-			start=-10.00,
-			stop=1.00,
-			step=0.01
-		)
-
-
-class CovidTwitterMisinfoModel(BaseCovidTwitterMisinfoModel):
-	def __init__(
-			self, emb_model, emb_size, gamma, *args, **kwargs
-	):
-		super().__init__(*args, **kwargs)
-		self.emb_size = emb_size
-		self.gamma = gamma
-
-		self.f_dropout = nn.Dropout(
-			p=self.config.hidden_dropout_prob
-		)
-		# TODO determine from emb_model
-		self.emb_model = TransDEmbedding(
-			self.config.hidden_size,
-			self.emb_size
-		)
-
-	def forward(self, batch):
-		num_examples = batch['num_examples']
-		num_sequences_per_example = batch['num_sequences_per_example']
-		pad_seq_len = batch['pad_seq_len']
-
-		# [bsize, num_seq, seq_len] -> [bsize * num_seq, seq_len]
-		input_ids = batch['input_ids'].view(num_examples * num_sequences_per_example, pad_seq_len)
-		attention_mask = batch['attention_mask'].view(num_examples * num_sequences_per_example, pad_seq_len)
-		token_type_ids = batch['token_type_ids'].view(num_examples * num_sequences_per_example, pad_seq_len)
-
-		# [bsize * num_seq, seq_len, hidden_size]
-		contextualized_embeddings = self.bert(
-			input_ids,
-			attention_mask=attention_mask,
-			token_type_ids=token_type_ids
-		)[0]
-		# [bsize * num_seq, hidden_size]
-		lm_output = contextualized_embeddings[:, 0]
-		lm_output = self.f_dropout(lm_output)
-		ex_embs, ex_projs = self.emb_model(lm_output)
-		# [bsize, num_seq, emb_size]
-		ex_embs = ex_embs.view(num_examples, num_sequences_per_example, self.emb_size)
-		# [bsize, num_seq, emb_size]
-		ex_projs = ex_projs.view(num_examples, num_sequences_per_example, self.emb_size)
-
-		# all [bsize, emb_size], [bsize, emb_size], [bsize, pos_samples, emb_size], [bsize, neg_samples, emb_size]
-		t_ex_embs, m_embs, pos_embs, neg_embs = self._split_embeddings(ex_embs, batch)
-		t_ex_projs, m_projs, pos_projs, neg_projs = self._split_embeddings(ex_projs, batch)
-		# [bsize, 1, emb_size]
-		t_ex_embs = t_ex_embs.unsqueeze(dim=-2)
-		t_ex_projs = t_ex_projs.unsqueeze(dim=-2)
-		m_embs = m_embs.unsqueeze(dim=-2)
-		m_projs = m_projs.unsqueeze(dim=-2)
-		t_ex_embs = t_ex_embs, t_ex_projs
-		m_embs = m_embs, m_projs
-		pos_embs = pos_embs, pos_projs
-		neg_embs = neg_embs, neg_projs
-
-		# [bsize]
-		pos_subj_energy = self.emb_model.energy(t_ex_embs, m_embs, pos_embs)
-		# [bsize]
-		pos_obj_energy = self.emb_model.energy(pos_embs, m_embs, t_ex_embs)
-		# [bsize, 2]
-		pos_energy = torch.stack([pos_subj_energy, pos_obj_energy], dim=-1)
-		# [bsize]
-		neg_subj_energy = self.emb_model.energy(t_ex_embs, m_embs, neg_embs)
-		# [bsize]
-		neg_obj_energy = self.emb_model.energy(neg_embs, m_embs, t_ex_embs)
-		# [bsize, 2]
-		neg_energy = torch.stack([neg_subj_energy, neg_obj_energy], dim=-1)
-		# [bsize]
-		rel_energy = self.emb_model.rel_energy(t_ex_embs, m_embs)
-
-		return t_ex_embs, m_embs, pos_energy, neg_energy, rel_energy
-
-	def _split_embeddings(self, embs, batch):
-		t_ex_embs = embs[:, 0]
-		m_embs = embs[:, 1]
-		pos_samples = batch['pos_samples']
-		pos_embs = embs[:, 2:2+pos_samples]
-		neg_samples = batch['neg_samples']
-		neg_embs = embs[:, 2+pos_samples:2+pos_samples+neg_samples]
-
-		return t_ex_embs, m_embs, pos_embs, neg_embs
-
-	def loss(self, pos_energy, neg_energy, subj_obj_mask):
-		# first randomly pick between subject and object losses
-		# [bsize]
-		pos_energy = (pos_energy * subj_obj_mask).sum(dim=-1)
-		# [bsize]
-		neg_energy = (neg_energy * subj_obj_mask).sum(dim=-1)
-		margin = pos_energy - neg_energy
-		loss = torch.clamp(self.gamma + margin, min=0.0)
-		accuracy = (pos_energy.lt(neg_energy)).float().mean()
-		loss = loss.mean()
-		return loss, accuracy
-
 
 def get_device_id():
 	try:
@@ -336,13 +347,14 @@ class TransDEmbedding(nn.Module):
 	def __init__(self, hidden_size, emb_size):
 		super().__init__()
 		self.emb_size = emb_size
+		self.td_emb_size = self.emb_size // 2
 		self.e_emb_layer = nn.Linear(
 			hidden_size,
-			self.emb_size
+			self.td_emb_size
 		)
 		self.e_proj_layer = nn.Linear(
 			hidden_size,
-			self.emb_size
+			self.td_emb_size
 		)
 
 	def forward(self, source_embeddings):
@@ -355,8 +367,8 @@ class TransDEmbedding(nn.Module):
 		ex_embs = ex_embs / torch.clamp(ex_emb_norms, max=1.0)
 
 		ex_projs = self.e_proj_layer(source_embeddings)
-
-		return ex_embs, ex_projs
+		ex_embs = torch.cat([ex_embs, ex_projs], dim=-1)
+		return ex_embs
 
 	def project(self, c, c_proj, r_proj):
 		c_p = c + torch.sum(c * c_proj, dim=-1, keepdim=True) * r_proj
@@ -365,20 +377,13 @@ class TransDEmbedding(nn.Module):
 		return c_p
 
 	def energy(self, head, rel, tail):
-		h, h_proj = head
-		r, r_proj = rel
-		t, t_proj = tail
+		h, h_proj = head[..., :self.td_emb_size], head[..., self.td_emb_size:]
+		r, r_proj = rel[..., :self.td_emb_size], rel[..., self.td_emb_size:]
+		t, t_proj = tail[..., :self.td_emb_size], tail[..., self.td_emb_size:]
 		h_p = self.project(h, h_proj, r_proj)
 		t_p = self.project(t, t_proj, r_proj)
 		h_r_t_diff = h_p + r - t_p
 		h_r_t_energy = torch.norm(h_r_t_diff, p=2, dim=-1, keepdim=False)
 		return h_r_t_energy
 
-	def rel_energy(self, head, rel):
-		h, h_proj = head
-		r, r_proj = rel
-		h_p = self.project(h, h_proj, r_proj)
-		h_r_t_diff = r - h_p
-		h_r_t_energy = torch.norm(h_r_t_diff, p=2, dim=-1, keepdim=False)
-		return h_r_t_energy
 

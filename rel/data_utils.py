@@ -229,13 +229,15 @@ class MisinfoDataset(Dataset):
 			misinfo,
 			pos_samples=1,
 			neg_samples=1,
-			shuffle=False
+			shuffle=False,
+			neg_labels=False
 	):
 		self.generator = None
 		self.shuffle = shuffle
 		self.misinfo = misinfo
 		self.neg_samples = neg_samples
 		self.pos_samples = pos_samples
+		self.neg_labels = neg_labels
 		for m_id, m in self.misinfo.items():
 			m['token_data'] = tokenizer(
 				m['text']
@@ -270,12 +272,14 @@ class MisinfoDataset(Dataset):
 				if m_id in d_misinfo:
 					m_label = label_text_to_relevant_id(d_misinfo[m_id])
 					if m_label > 0:
-						self.examples.append((t_ex, m_ex))
+						self.examples.append((t_ex, m_ex, m_label))
 						self.pos_examples[m_id].append(t_ex)
 					else:
 						# "hard" negatives created here
 						# TODO consider whether negative samples should be "hard" or "soft"
 						# TODO "hard" being annotated negatives, "soft" being sampled from all other tweets
+						if self.neg_labels:
+							self.examples.append((t_ex, m_ex, m_label))
 						self.neg_examples[m_id].append(t_ex)
 					self.num_labels[m_label] += 1
 					self.num_classes[m_id] += 1
@@ -299,7 +303,7 @@ class MisinfoDataset(Dataset):
 		if torch.is_tensor(idx):
 			idx = idx.tolist()
 
-		t_ex, m_ex = self.examples[idx]
+		t_ex, m_ex, m_label = self.examples[idx]
 		m_id = m_ex['m_id']
 
 		pos_samples = self._sample(
@@ -317,6 +321,7 @@ class MisinfoDataset(Dataset):
 		ex = {
 			't_ex': t_ex,
 			'm_ex': m_ex,
+			'label': m_label,
 			'p_samples': pos_samples,
 			'n_samples': neg_samples,
 			'subj_obj_sample': subj_obj_sample
@@ -380,16 +385,17 @@ class MisinfoBatchCollator:
 		subj_obj_mask = torch.zeros([num_examples, 2], dtype=torch.float)
 		ids = []
 		m_ids = []
+		labels = []
 		for ex_idx, ex in enumerate(examples):
 			ids.append(ex['t_ex']['id'])
 			m_ids.append(ex['m_ex']['m_id'])
+			labels.append(ex['label'])
 			ex_seqs = [ex['t_ex'], ex['m_ex']] + ex['p_samples'] + ex['n_samples']
 			subj_obj_mask[ex_idx, ex['subj_obj_sample']] = 1.0
 			for seq_idx, seq in enumerate(ex_seqs):
 				self.pad_and_apply(seq['token_data']['input_ids'], input_ids, ex_idx, seq_idx)
 				self.pad_and_apply(seq['token_data']['attention_mask'], attention_mask, ex_idx, seq_idx)
 				self.pad_and_apply(seq['token_data']['token_type_ids'], token_type_ids, ex_idx, seq_idx)
-
 		batch = {
 			'id': ids,
 			'm_ids': m_ids,
@@ -403,6 +409,7 @@ class MisinfoBatchCollator:
 			'attention_mask': attention_mask,
 			'token_type_ids': token_type_ids,
 			'subj_obj_mask': subj_obj_mask,
+			'labels': torch.tensor(labels, dtype=torch.long),
 		}
 
 		return batch

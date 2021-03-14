@@ -29,17 +29,18 @@ def compute_threshold_f1(
 		scores,
 		labels,
 		threshold=None,
+		threshold_range=None,
 		threshold_min=-1.0,
 		threshold_max=1.0,
 		threshold_step=0.05
 ):
-	if threshold is None:
+	if threshold is None and threshold_range is None:
 		threshold_range = np.arange(
 			start=threshold_min,
 			stop=threshold_max,
 			step=threshold_step
 		)
-	else:
+	elif threshold is not None:
 		threshold_range = [threshold]
 	max_f1 = float('-inf')
 	max_vals = None
