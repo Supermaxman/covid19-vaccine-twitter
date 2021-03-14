@@ -248,7 +248,6 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			triplet_eval_outputs, label_eval_outputs = outputs
 			# triplet eval is dataloader_idx 0
 			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in triplet_eval_outputs], dim=0)
-			print(f'loss={loss.shape}')
 			accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in triplet_eval_outputs], dim=0)
 			loss = loss.mean()
 			accuracy = accuracy.mean()
@@ -261,10 +260,6 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			labels = torch.cat([x[f'{name}_labels'] for x in label_eval_outputs], dim=0)
 			ex_ids = [ex_id for x in label_eval_outputs for ex_id in x[f'{name}_ids']]
 			m_ids = [m_id for x in label_eval_outputs for m_id in x[f'{name}_m_ids']]
-			print(f'ex_embs={ex_embs.shape}')
-			print(f'labels={labels.shape}')
-			print(f'ex_ids={len(ex_ids)}')
-			print(f'm_ids={len(m_ids)}')
 			# collect all positive examples under each misinfo and take average embedding
 			m_ex_embs_list = defaultdict(list)
 			for ex_emb, m_label, m_id in zip(ex_embs, labels, m_ids):
@@ -275,10 +270,11 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			for m_id, m_exs in m_ex_embs_list.items():
 				# average embedding for positive examples for m_id
 				# [emb_size]
-
-				m_ex_emb = torch.cat(m_exs, dim=0).mean(dim=0)
+				if len(m_exs) == 1:
+					m_ex_emb = m_exs[0]
+				else:
+					m_ex_emb = torch.cat(m_exs, dim=0).mean(dim=0)
 				m_ex_avg_embs[m_id] = m_ex_emb
-				print(f'{m_id}-m_ex_emb ({len(m_exs)} [{m_exs[0].shape}]): {m_ex_emb.shape}')
 				if default_m_ex_emb is None:
 					default_m_ex_emb = torch.zeros_like(m_ex_emb)
 
@@ -293,9 +289,6 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			# [bsize, emb_size]
 			m_ex_embs = torch.stack(m_ex_embs, dim=0)
 			# max energy is inf, min energy is 0
-			print(f'ex_embs={ex_embs.shape}')
-			print(f'm_embs={m_embs.shape}')
-			print(f'm_ex_embs={m_ex_embs.shape}')
 			m_ex_energies = self.emb_model.energy(ex_embs, m_embs, m_ex_embs)
 			# max score is 0, min score is -inf
 			# [bsize]
