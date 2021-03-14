@@ -248,6 +248,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			triplet_eval_outputs, label_eval_outputs = outputs
 			# triplet eval is dataloader_idx 0
 			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in triplet_eval_outputs], dim=0)
+			print(f'loss={loss.shape}')
 			accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in triplet_eval_outputs], dim=0)
 			loss = loss.mean()
 			accuracy = accuracy.mean()
