@@ -59,7 +59,9 @@ class TransDEmbedding(nn.Module):
 		h_p = self.project(h, h_proj, r_proj)
 		t_p = self.project(t, t_proj, r_proj)
 		h_r_t_diff = h_p + r - t_p
-		h_r_t_energy = torch.norm(h_r_t_diff, p=2, dim=-1, keepdim=False)
+		# h_r_t_energy = torch.norm(h_r_t_diff, p=2, dim=-1, keepdim=False)
+		# l2 norm squared = sum of squares
+		h_r_t_energy = (h_r_t_diff * h_r_t_diff).sum(dim=-1)
 		return h_r_t_energy
 
 	def loss(self, pos_energy, neg_energy):
@@ -100,7 +102,8 @@ class TransEEmbedding(nn.Module):
 
 	def energy(self, head, rel, tail):
 		h_r_t_diff = head + rel - tail
-		h_r_t_energy = torch.norm(h_r_t_diff, p=2, dim=-1, keepdim=False)
+		# h_r_t_energy = torch.norm(h_r_t_diff, p=2, dim=-1, keepdim=False)
+		h_r_t_energy = (h_r_t_diff * h_r_t_diff).sum(dim=-1)
 		return h_r_t_energy
 
 	def loss(self, pos_energy, neg_energy):
