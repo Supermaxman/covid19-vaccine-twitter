@@ -39,17 +39,17 @@ class TransDEmbedding(nn.Module):
 			raise ValueError(f'Unknown emb type: {emb_type}')
 		# https://www.aclweb.org/anthology/P15-1067.pdf
 		# normalize all lookups to max l2 norm of 1
-		ex_emb_norms = torch.norm(ex_embs, p=2, dim=-1, keepdim=True)
+		# ex_emb_norms = torch.norm(ex_embs, p=2, dim=-1, keepdim=True)
 		# [bsize * num_seq, emb_size]
-		ex_embs = ex_embs / torch.clamp(ex_emb_norms, min=1.0)
+		# ex_embs = ex_embs / torch.clamp(ex_emb_norms, min=1.0)
 
 		ex_embs = torch.cat([ex_embs, ex_projs], dim=-1)
 		return ex_embs
 
 	def project(self, c, c_proj, r_proj):
 		c_p = c + torch.sum(c * c_proj, dim=-1, keepdim=True) * r_proj
-		c_p_norm = torch.norm(c_p, p=2, dim=-1, keepdim=True)
-		c_p = c_p / torch.clamp(c_p_norm, min=1.0)
+		# c_p_norm = torch.norm(c_p, p=2, dim=-1, keepdim=True)
+		# c_p = c_p / torch.clamp(c_p_norm, min=1.0)
 		return c_p
 
 	def energy(self, head, rel, tail):
