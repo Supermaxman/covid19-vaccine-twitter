@@ -14,7 +14,8 @@ from emb_utils import *
 
 class CovidTwitterMisinfoModel(pl.LightningModule):
 	def __init__(
-			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, emb_model, emb_size, gamma,
+			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, emb_model, emb_size, emb_loss_norm,
+			gamma,
 			threshold=None,
 			torch_cache_dir=None, predict_mode=False, predict_path=None, load_pretrained=False
 	):
@@ -49,6 +50,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			self.config = self.bert.config
 
 		self.emb_size = emb_size
+		self.emb_loss_norm = emb_loss_norm
 		self.gamma = gamma
 
 		self.f_dropout = nn.Dropout(
@@ -58,13 +60,15 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			self.emb_model = TransDEmbedding(
 				self.config.hidden_size,
 				self.emb_size,
-				self.gamma
+				self.gamma,
+				self.emb_loss_norm
 			)
 		elif emb_model == 'transe':
 			self.emb_model = TransEEmbedding(
 				self.config.hidden_size,
 				self.emb_size,
-				self.gamma
+				self.gamma,
+				self.emb_loss_norm
 			)
 		else:
 			raise ValueError(f'Unknown embedding model: {emb_model}')

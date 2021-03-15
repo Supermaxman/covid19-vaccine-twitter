@@ -4,10 +4,11 @@ import torch
 
 
 class TransDEmbedding(nn.Module):
-	def __init__(self, hidden_size, emb_size, gamma):
+	def __init__(self, hidden_size, emb_size, gamma, loss_norm=2):
 		super().__init__()
 		self.gamma = gamma
 		self.emb_size = emb_size
+		self.loss_norm = loss_norm
 		self.td_emb_size = self.emb_size // 2
 		self.e_emb_layer = nn.Linear(
 			hidden_size,
@@ -64,7 +65,12 @@ class TransDEmbedding(nn.Module):
 		h_r_t_diff = h_p + r - t_p
 		# h_r_t_energy = torch.norm(h_r_t_diff, p=2, dim=-1, keepdim=False)
 		# l2 norm squared = sum of squares
-		h_r_t_energy = (h_r_t_diff * h_r_t_diff).sum(dim=-1)
+		if self.loss_norm == 1:
+			h_r_t_energy = torch.norm(h_r_t_diff, p=1, dim=-1, keepdim=False)
+		elif self.loss_norm == 2:
+			h_r_t_energy = (h_r_t_diff * h_r_t_diff).sum(dim=-1)
+		else:
+			raise ValueError(f'Unknown loss norm: {self.loss_norm}')
 		return h_r_t_energy
 
 	def loss(self, pos_energy, neg_energy):
@@ -75,10 +81,11 @@ class TransDEmbedding(nn.Module):
 
 
 class TransEEmbedding(nn.Module):
-	def __init__(self, hidden_size, emb_size, gamma):
+	def __init__(self, hidden_size, emb_size, gamma, loss_norm=2):
 		super().__init__()
 		self.gamma = gamma
 		self.emb_size = emb_size
+		self.loss_norm = loss_norm
 		self.e_emb_layer = nn.Linear(
 			hidden_size,
 			self.emb_size
@@ -105,8 +112,12 @@ class TransEEmbedding(nn.Module):
 
 	def energy(self, head, rel, tail):
 		h_r_t_diff = head + rel - tail
-		# h_r_t_energy = torch.norm(h_r_t_diff, p=2, dim=-1, keepdim=False)
-		h_r_t_energy = (h_r_t_diff * h_r_t_diff).sum(dim=-1)
+		if self.loss_norm == 1:
+			h_r_t_energy = torch.norm(h_r_t_diff, p=1, dim=-1, keepdim=False)
+		elif self.loss_norm == 2:
+			h_r_t_energy = (h_r_t_diff * h_r_t_diff).sum(dim=-1)
+		else:
+			raise ValueError(f'Unknown loss norm: {self.loss_norm}')
 		return h_r_t_energy
 
 	def loss(self, pos_energy, neg_energy):

@@ -35,6 +35,7 @@ if __name__ == '__main__':
 	parser.add_argument('-tmp', '--train_misinfo_path', default=None)
 	parser.add_argument('-vmp', '--val_misinfo_path', default=None)
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
+	parser.add_argument('-eln', '--emb_loss_norm', default=2, type=int)
 	parser.add_argument('-em', '--emb_model', default='transd')
 	parser.add_argument('-wd', '--weight_decay', default=0.0, type=float)
 	parser.add_argument('-gcv', '--gradient_clip_val', default=1.0, type=float)
@@ -172,6 +173,7 @@ if __name__ == '__main__':
 		threshold=args.threshold,
 		emb_model=args.emb_model,
 		emb_size=args.emb_size,
+		emb_loss_norm=args.emb_loss_norm,
 		gamma=args.gamma,
 		torch_cache_dir=args.torch_cache_dir,
 		load_pretrained=args.load_checkpoint is not None,
