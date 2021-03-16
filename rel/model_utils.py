@@ -84,6 +84,13 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				self.gamma,
 				self.emb_loss_norm
 			)
+		elif emb_model == 'tucker':
+			self.emb_model = TuckEREmbedding(
+				self.config.hidden_size,
+				self.emb_size,
+				self.gamma,
+				self.emb_loss_norm
+			)
 		else:
 			raise ValueError(f'Unknown embedding model: {emb_model}')
 
