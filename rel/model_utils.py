@@ -70,6 +70,13 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				self.gamma,
 				self.emb_loss_norm
 			)
+		elif emb_model == 'rotate':
+			self.emb_model = RotatEEmbedding(
+				self.config.hidden_size,
+				self.emb_size,
+				self.gamma,
+				self.emb_loss_norm
+			)
 		else:
 			raise ValueError(f'Unknown embedding model: {emb_model}')
 
