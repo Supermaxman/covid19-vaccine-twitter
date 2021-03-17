@@ -2,6 +2,7 @@
 import math
 from torch import nn
 import torch
+import numpy as np
 
 
 class TransDEmbedding(nn.Module):
@@ -252,7 +253,7 @@ class TuckEREmbedding(nn.Module):
 		self.loss_norm = loss_norm
 
 		self.weight = nn.parameter.Parameter(
-			torch.Tensor(self.emb_size, self.emb_size, self.emb_size)
+			torch.tensor(np.random.uniform(-1, 1, (self.emb_size, self.emb_size, self.emb_size)))
 		)
 
 		self.e_emb_layer = nn.Linear(
@@ -263,7 +264,7 @@ class TuckEREmbedding(nn.Module):
 			hidden_size,
 			self.emb_size
 		)
-		self.score_func = nn.LogSigmoid()
+		# self.score_func = nn.LogSigmoid()
 
 	def forward(self, source_embeddings, emb_type):
 		if emb_type == 'entity':
@@ -283,23 +284,31 @@ class TuckEREmbedding(nn.Module):
 		# [1, 1, ..., e_size, e_size, e_size]
 		for _ in range(num_batch_dims):
 			w = w.unsqueeze(dim=0)
+		print(f'w={w.shape}')
 		head = head.unsqueeze(dim=-1)
 		head = head.unsqueeze(dim=-1)
+		print(f'w={head.shape}')
 		# [..., emb_size, emb_size, emb_size] -> [..., emb_size, emb_size]
 		w = (w * head).sum(dim=-1)
+		print(f'w_h={w.shape}')
 		# [..., emb_size, 1]
 		rel = rel.unsqueeze(dim=-1)
+		print(f'rel={rel.shape}')
 		# [..., emb_size]
 		w = (w * rel).sum(dim=-1)
+		print(f'w_r={w.shape}')
 		# [...]
 		w = (w * tail).sum(dim=-1)
+		print(f'w_t={w.shape}')
+		print('----------')
 		# this is treated as a score by TuckER
 		h_r_t_energy = -w
 		return h_r_t_energy
 
 	def loss(self, pos_energy, neg_energy):
-		pos_loss = -self.score_func(self.gamma - pos_energy)
-		neg_loss = -self.score_func(neg_energy - self.gamma)
+
+		pos_loss = -torch.log(torch.sigmoid(-pos_energy) + 1e-6)
+		neg_loss = -torch.log(1.0 - torch.sigmoid(-neg_energy) + 1e-6)
 		loss = pos_loss + neg_loss
 		accuracy = (pos_energy.lt(neg_energy)).float().mean()
 		return loss, accuracy
