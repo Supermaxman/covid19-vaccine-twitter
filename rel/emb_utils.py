@@ -148,7 +148,6 @@ class RotatEEmbedding(nn.Module):
 			hidden_size,
 			self.td_emb_size
 		)
-		self.score_func = nn.LogSigmoid()
 
 	def forward(self, source_embeddings, emb_type):
 		if emb_type == 'entity':
@@ -185,8 +184,8 @@ class RotatEEmbedding(nn.Module):
 		return h_r_t_energy
 
 	def loss(self, pos_energy, neg_energy):
-		pos_loss = -self.score_func(self.gamma - pos_energy)
-		neg_loss = -self.score_func(neg_energy - self.gamma)
+		pos_loss = -torch.log(torch.sigmoid(self.gamma - pos_energy) + 1e-6)
+		neg_loss = -torch.log(torch.sigmoid(neg_energy - self.gamma) + 1e-6)
 		loss = pos_loss + neg_loss
 		accuracy = (pos_energy.lt(neg_energy)).float().mean()
 		return loss, accuracy
