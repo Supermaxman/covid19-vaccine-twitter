@@ -224,6 +224,7 @@ class TransMSEmbedding(nn.Module):
 	def energy(self, head, rel, tail):
 		rel = rel[..., :self.emb_size]
 		alpha = rel[..., -1]
+		alpha = alpha.unsqueeze(dim=-1)
 		h_p = -torch.tanh(tail * rel) * head
 		r_p = rel + alpha * (head * tail)
 		t_p = torch.tanh(head * rel) * tail
