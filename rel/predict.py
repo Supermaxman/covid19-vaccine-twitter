@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import loggers as pl_loggers
 
 from model_utils import *
-from gan_utils import *
 from data_utils import *
 
 import torch
@@ -28,19 +27,16 @@ if __name__ == '__main__':
 	parser.add_argument('-cd', '--torch_cache_dir', default=None)
 	parser.add_argument('-tpu', '--use_tpus', default=False, action='store_true')
 	parser.add_argument('-gpu', '--gpus', default='0')
-	parser.add_argument('-ts', '--train_sampling', default='none')
-	parser.add_argument('-ls', '--losses', default='compare_loss')
 	parser.add_argument('-mip', '--misinfo_path', default=None)
-	parser.add_argument('-mt', '--model_type', default='lm')
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
+	parser.add_argument('-eln', '--emb_loss_norm', default=2, type=int)
+	parser.add_argument('-em', '--emb_model', default='transd')
 
 	args = parser.parse_args()
 
 	pl.seed_everything(args.seed)
 
 	save_directory = os.path.join(args.save_directory, args.model_name)
-	checkpoint_path = os.path.join(save_directory, 'pytorch_model.bin')
-
 	if not os.path.exists(save_directory):
 		os.mkdir(save_directory)
 
@@ -80,116 +76,54 @@ if __name__ == '__main__':
 		misinfo = json.load(f)
 
 		logging.info(f'Loaded misconception info.')
-	logging.info('Loading datasets...')
-	train_sampling = args.train_sampling.lower()
-	if train_sampling == 'pairwise':
-		val_dataset = MisinfoPairwiseDataset(
-			documents=val_data,
-			tokenizer=tokenizer,
-			misinfo=misinfo,
-			all_misinfo=True
-		)
-		val_data_loader = DataLoader(
-			val_dataset,
-			num_workers=num_workers,
-			shuffle=False,
-			batch_size=args.eval_batch_size,
-			collate_fn=MisinfoPairwiseBatchCollator(
-				misinfo,
-				tokenizer,
-				args.max_seq_len,
-				all_misinfo=True,
-				force_max_seq_len=args.use_tpus,
-			)
-		)
-	elif train_sampling == 'pairwise-emb':
-		val_dataset = MisinfoPairwiseEmbDataset(
-			documents=val_data,
-			tokenizer=tokenizer,
-			misinfo=misinfo,
-			all_misinfo=True
-		)
-		val_data_loader = DataLoader(
-			val_dataset,
-			num_workers=num_workers,
-			shuffle=False,
-			batch_size=args.eval_batch_size,
-			collate_fn=MisinfoPairwiseEmbBatchCollator(
-				misinfo,
-				tokenizer,
-				args.max_seq_len,
-				all_misinfo=True,
-				force_max_seq_len=args.use_tpus,
-			)
-		)
-	else:
-		val_dataset = MisinfoDataset(
-			documents=val_data,
-			tokenizer=tokenizer,
-			misinfo=misinfo
-		)
-		val_data_loader = DataLoader(
-			val_dataset,
-			num_workers=num_workers,
-			shuffle=False,
-			batch_size=args.eval_batch_size,
-			collate_fn=MisinfoBatchCollator(
-				misinfo,
-				tokenizer,
-				args.max_seq_len,
-				all_misinfo=True,
-				force_max_seq_len=args.use_tpus,
-			)
-		)
 
-	logging.info(f'train_sampling={train_sampling}')
-	logging.info(f'val={len(val_dataset)}')
+	logging.info('Loading datasets...')
+	val_entity_dataset = MisinfoEntityDataset(
+		documents=val_data,
+		tokenizer=tokenizer,
+	)
+	val_rel_dataset = MisinfoRelDataset(
+		misinfo=misinfo,
+		tokenizer=tokenizer
+	)
+	val_entity_data_loader = DataLoader(
+		val_entity_dataset,
+		num_workers=num_workers,
+		batch_size=args.batch_size,
+		shuffle=False,
+		collate_fn=MisinfoPredictBatchCollator(
+			args.max_seq_len,
+			force_max_seq_len=args.use_tpus,
+		)
+	)
+	val_rel_data_loader = DataLoader(
+		val_rel_dataset,
+		num_workers=num_workers,
+		batch_size=args.batch_size,
+		shuffle=False,
+		collate_fn=MisinfoPredictBatchCollator(
+			args.max_seq_len,
+			force_max_seq_len=args.use_tpus,
+		)
+	)
+	logging.info(f'val_entities={len(val_entity_dataset)}')
+	logging.info(f'val_rels={len(val_rel_dataset)}')
 
 	logging.info('Loading model...')
-	model_args = dict(
+	model = CovidTwitterMisinfoModel(
 		pre_model_name=args.pre_model_name,
 		learning_rate=0,
 		lr_warmup=0.1,
 		updates_total=0,
 		weight_decay=0,
-		losses=args.losses.split(','),
-		torch_cache_dir=args.torch_cache_dir,
+		emb_model=args.emb_model,
+		emb_size=args.emb_size,
+		emb_loss_norm=args.emb_loss_norm,
+		gamma=0.0,
 		load_pretrained=True,
 		predict_mode=True,
 		predict_path=args.output_path
 	)
-
-	model_type = args.model_type.lower()
-	if model_type == 'lm':
-		model = CovidTwitterMisinfoModel(
-			**model_args,
-			emb_size=args.emb_size
-		)
-	elif model_type == 'lm-avg':
-		model = CovidTwitterMisinfoAvgModel(
-			**model_args,
-			emb_size=args.emb_size
-		)
-	elif model_type == 'lm-pairwise':
-		model = CovidTwitterPairwiseMisinfoModel(
-			**model_args
-		)
-	elif model_type == 'lm-pairwise-gan':
-		model = CovidTwitterPairwiseGanMisinfoModel(
-			**model_args
-		)
-	elif model_type == 'lm-pairwise-emb':
-		model = CovidTwitterPairwiseEmbMisinfoModel(
-			**model_args,
-			emb_size=args.emb_size
-		)
-	elif model_type == 'lm-static':
-		model = CovidTwitterStaticMisinfoModel(
-			**model_args,
-			num_misinfo=len(misinfo)
-		)
-	else:
-		raise ValueError(f'Unknown model type: {model_type}')
 
 	# load checkpoint
 	logging.warning(f'Loading weights from trained checkpoint: {checkpoint_path}...')
@@ -230,7 +164,8 @@ if __name__ == '__main__':
 
 	logging.info('Predicting...')
 	try:
-		trainer.test(model, val_data_loader)
+		trainer.test(model, val_rel_data_loader)
+		trainer.test(model, val_entity_data_loader)
 	except Exception as e:
 		logging.exception('Exception during predicting', exc_info=e)
 

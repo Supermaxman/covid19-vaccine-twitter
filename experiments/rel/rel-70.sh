@@ -26,9 +26,10 @@ MISINFO_GAMMA=1.0
 MISINFO_TRAIN_EPOCHS=40
 MISINFO_EVAL_BATCH_SIZE=8
 
-MISINFO_NUM_GPUS=4
-MISINFO_TRAIN=true
-MISINFO_RUN=false
+# 4 for training, 1 for predictions
+MISINFO_NUM_GPUS=1
+MISINFO_TRAIN=false
+MISINFO_PREDICT=true
 MISINFO_EVAL=false
 
 export TOKENIZERS_PARALLELISM=true
@@ -78,22 +79,21 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --gpus ${MISINFO_TRAIN_GPUS}
 fi
 
-#if [[ ${MISINFO_RUN} = true ]]; then
-#    echo "Running dev misinfo..."
-#    python identify/predict.py \
-#      --model_type ${MISINFO_MODEL_TYPE} \
-#      --losses ${MISINFO_LOSSES} \
-#      --emb_size ${MISINFO_EMB_SIZE} \
-#      --misinfo_path ${DATASET_PATH}/misinfo.json \
-#      --val_path ${DATASET_PATH}/dev.jsonl \
-#      --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
-#      --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
-#      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
-#      --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
-#      --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
-#      --train_sampling ${MISINFO_TRAIN_SAMPLING} \
-#      --gpus ${MISINFO_EVAL_GPUS} \
-#    ; \
+if [[ ${MISINFO_PREDICT} = true ]]; then
+    echo "Running dev misinfo..."
+    python rel/predict.py \
+      --emb_size ${MISINFO_EMB_SIZE} \
+      --emb_model ${MISINFO_EMB_MODEL} \
+      --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
+      --misinfo_path ${DATASET_PATH}/misinfo.json \
+      --val_path ${DATASET_PATH}/dev.jsonl \
+      --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
+      --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
+      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
+      --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
+      --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
+      --gpus ${MISINFO_EVAL_GPUS}
+
 #    python identify/format_predictions.py \
 #      --input_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
 #      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/dev_scores.json
@@ -116,7 +116,7 @@ fi
 #    python identify/format_predictions.py \
 #      --input_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_TEST \
 #      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json
-#fi
+fi
 
 
 echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"

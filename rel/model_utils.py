@@ -213,44 +213,28 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				return self._label_eval_step(batch, 'val')
 
 	def _predict_step(self, batch, name):
-		raise NotImplementedError()
-		ex_embs, m_embs = self._forward_step(batch)
-		scores = scores.detach()
-		device_id = get_device_id()
-		if len(scores.shape) == 2:
-			ids = []
-			m_ids = []
-			m_scores = []
+		e_type = batch['e_type']
 
-			for b_idx, b_id in enumerate(batch['ids']):
-				for m_idx, m_id in enumerate(batch['m_ids']):
-					m_score = scores[b_idx, m_idx].item()
-					ids.append(b_id)
-					m_ids.append(m_id)
-					m_scores.append(m_score)
+		input_ids = batch['input_ids']
+		attention_mask = batch['attention_mask']
+		token_type_ids = batch['token_type_ids']
 
-			ex_dict = {
-				'ids': ids,
-				'm_id': m_ids,
-				'm_score': m_scores,
-			}
-		else:
-			ex_dict = {
-				'ids': batch['ids'],
-				'm_id': batch['m_ids'],
-				'm_score': scores.tolist()
-			}
-		self.write_prediction_dict(
-			ex_dict,
-			filename=os.path.join(self.predict_path, f'predictions-{device_id}.pt')
-		)
-		result = {
+		contextualized_embeddings = self.bert(
+			input_ids,
+			attention_mask=attention_mask,
+			token_type_ids=token_type_ids
+		)[0]
+		# [bsize, hidden_size]
+		lm_output = contextualized_embeddings[:, 0]
+		b_embs = self.emb_model(lm_output, e_type)
+
+		results = {
+			f'{name}_e_type': e_type,
 			f'{name}_ids': batch['ids'],
-			f'{name}_m_ids': batch['m_ids'],
-			f'{name}_scores': scores,
+			f'{name}_b_embs': b_embs.detach()
 		}
 
-		return result
+		return results
 
 	def _triplet_eval_step(self, batch, name):
 		loss, accuracy = self._triplet_step(batch)
@@ -347,10 +331,30 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 	def validation_epoch_end(self, outputs):
 		if not self.predict_mode:
 			self._eval_epoch_end(outputs, 'val')
+		else:
+			self._predict_epoch_end(outputs, 'val')
 
 	def test_epoch_end(self, outputs):
 		if not self.predict_mode:
 			self._eval_epoch_end(outputs, 'test')
+		else:
+			self._predict_epoch_end(outputs, 'test')
+
+	def _predict_epoch_end(self, outputs, name):
+		embs = torch.cat([x[f'{name}_b_embs'] for x in outputs], dim=0)
+		e_ids = [e_id for x in outputs for e_id in x[f'{name}_ids']]
+		e_type = outputs[0][f'{name}_e_type']
+
+		device_id = get_device_id()
+		e_path = os.path.join(self.predict_path, f'{e_type}-{device_id}-embeddings.pt')
+		torch.save(
+			{
+				'ids': e_ids,
+				'e_type': e_type,
+				'embs': embs
+			},
+			e_path
+		)
 
 	def configure_optimizers(self):
 		params = self._get_optimizer_params(self.weight_decay)

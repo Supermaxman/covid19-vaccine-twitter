@@ -357,7 +357,8 @@ class MisinfoDataset(Dataset):
 class MisinfoBatchCollator:
 	def __init__(
 			self, max_seq_len: int,
-			force_max_seq_len=False):
+			force_max_seq_len=False
+	):
 		self.max_seq_len = max_seq_len
 		self.force_max_seq_len = force_max_seq_len
 
@@ -419,4 +420,109 @@ class MisinfoBatchCollator:
 	def pad_and_apply(self, id_list, id_tensor, ex_idx, seq_idx):
 		ex_ids = id_list[:self.max_seq_len]
 		id_tensor[ex_idx, seq_idx, :len(ex_ids)] = torch.tensor(ex_ids, dtype=torch.long)
+
+
+class MisinfoEntityDataset(Dataset):
+	def __init__(
+			self,
+			documents,
+			tokenizer,
+	):
+		self.examples = []
+		for doc in tqdm(documents, desc='loading documents...'):
+			tweet_id = doc['id']
+			tweet_text = doc['full_text'].strip().replace('\r', ' ').replace('\n', ' ')
+			tweet_text = filter_tweet_text(tweet_text)
+
+			token_data = tokenizer(
+				tweet_text
+			)
+			ex = {
+				'id': tweet_id,
+				'e_type': 'entity',
+				'token_data': token_data
+			}
+			self.examples.append(ex)
+
+	def __len__(self):
+		return len(self.examples)
+
+	def __getitem__(self, idx):
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
+
+		return self.examples[idx]
+
+
+class MisinfoRelDataset(Dataset):
+	def __init__(
+			self,
+			misinfo,
+			tokenizer,
+	):
+		self.examples = []
+		for m_id, m in misinfo.items():
+			m['token_data'] = tokenizer(
+				m['text']
+			)
+			m['id'] = m_id
+			m['e_type'] = 'rel'
+			self.examples.append(m)
+
+	def __len__(self):
+		return len(self.examples)
+
+	def __getitem__(self, idx):
+		if torch.is_tensor(idx):
+			idx = idx.tolist()
+
+		return self.examples[idx]
+
+
+class MisinfoPredictBatchCollator:
+	def __init__(
+			self, max_seq_len: int,
+			force_max_seq_len=False
+	):
+		self.max_seq_len = max_seq_len
+		self.force_max_seq_len = force_max_seq_len
+
+	def _calculate_seq_padding(self, examples):
+		if self.force_max_seq_len:
+			pad_seq_len = self.max_seq_len
+		else:
+			pad_seq_len = 0
+			for ex in examples:
+				pad_seq_len = max(pad_seq_len, min(len(ex['token_data']['input_ids']), self.max_seq_len))
+		return pad_seq_len
+
+	def __call__(self, examples):
+		pad_seq_len = self._calculate_seq_padding(examples)
+		num_examples = len(examples)
+
+		input_ids = torch.zeros([num_examples, pad_seq_len], dtype=torch.long)
+		attention_mask = torch.zeros([num_examples, pad_seq_len], dtype=torch.long)
+		token_type_ids = torch.zeros([num_examples, pad_seq_len], dtype=torch.long)
+		ids = []
+		for ex_idx, ex in enumerate(examples):
+			ids.append(ex['id'])
+			self.pad_and_apply(ex['token_data']['input_ids'], input_ids, ex_idx)
+			self.pad_and_apply(ex['token_data']['attention_mask'], attention_mask, ex_idx)
+			self.pad_and_apply(ex['token_data']['token_type_ids'], token_type_ids, ex_idx)
+
+		batch = {
+			'ids': ids,
+			'e_type': examples[0]['e_type'],
+			'num_examples': num_examples,
+			'pad_seq_len': pad_seq_len,
+			'input_ids': input_ids,
+			'attention_mask': attention_mask,
+			'token_type_ids': token_type_ids,
+		}
+
+		return batch
+
+	def pad_and_apply(self, id_list, id_tensor, ex_idx):
+		ex_ids = id_list[:self.max_seq_len]
+		id_tensor[ex_idx, :len(ex_ids)] = torch.tensor(ex_ids, dtype=torch.long)
 
