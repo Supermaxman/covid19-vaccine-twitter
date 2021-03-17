@@ -284,23 +284,16 @@ class TuckEREmbedding(nn.Module):
 		# [1, 1, ..., e_size, e_size, e_size]
 		for _ in range(num_batch_dims):
 			w = w.unsqueeze(dim=0)
-		print(f'w={w.shape}')
 		head = head.unsqueeze(dim=-1)
 		head = head.unsqueeze(dim=-1)
-		print(f'w={head.shape}')
 		# [..., emb_size, emb_size, emb_size] -> [..., emb_size, emb_size]
 		w = (w * head).sum(dim=-1)
-		print(f'w_h={w.shape}')
 		# [..., emb_size, 1]
 		rel = rel.unsqueeze(dim=-1)
-		print(f'rel={rel.shape}')
 		# [..., emb_size]
 		w = (w * rel).sum(dim=-1)
-		print(f'w_r={w.shape}')
 		# [...]
 		w = (w * tail).sum(dim=-1)
-		print(f'w_t={w.shape}')
-		print('----------')
 		# this is treated as a score by TuckER
 		h_r_t_energy = -w
 		return h_r_t_energy
