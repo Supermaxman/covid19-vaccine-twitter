@@ -89,7 +89,7 @@ if __name__ == '__main__':
 	val_entity_data_loader = DataLoader(
 		val_entity_dataset,
 		num_workers=num_workers,
-		batch_size=args.batch_size,
+		batch_size=args.eval_batch_size,
 		shuffle=False,
 		collate_fn=MisinfoPredictBatchCollator(
 			args.max_seq_len,
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 	val_rel_data_loader = DataLoader(
 		val_rel_dataset,
 		num_workers=num_workers,
-		batch_size=args.batch_size,
+		batch_size=args.eval_batch_size,
 		shuffle=False,
 		collate_fn=MisinfoPredictBatchCollator(
 			args.max_seq_len,
