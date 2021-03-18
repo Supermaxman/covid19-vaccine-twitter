@@ -215,25 +215,31 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		attention_mask = batch['attention_mask']
 		token_type_ids = batch['token_type_ids']
 
+		print(f'{e_type}_predict_step2')
 		contextualized_embeddings = self.bert(
 			input_ids,
 			attention_mask=attention_mask,
 			token_type_ids=token_type_ids
 		)[0]
+		print(f'{e_type}_predict_step3')
 		# [bsize, hidden_size]
 		lm_output = contextualized_embeddings[:, 0]
 		b_embs = self.emb_model(lm_output, e_type)
+		print(f'{e_type}_predict_step4')
 
 		results = {
 			f'{name}_e_type': e_type,
 			f'{name}_ids': batch['ids'],
 			f'{name}_b_embs': b_embs.detach(),
 		}
+		print(f'{e_type}_predict_step5')
 		if 't_labels' in batch:
 			results[f'{name}_t_labels'] = batch['t_labels']
+		print(f'{e_type}_predict_step6')
 		if 'm_examples' in batch:
 			results[f'{name}_m_examples'] = batch['m_examples']
-
+		print(f'{e_type}_predict_step7')
+		print(results)
 		return results
 
 	def _triplet_eval_step(self, batch, name):
