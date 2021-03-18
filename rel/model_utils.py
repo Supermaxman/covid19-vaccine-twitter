@@ -226,9 +226,9 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		b_embs = self.emb_model(lm_output, e_type)
 
 		results = {
+			f'{name}_b_embs': b_embs.detach(),
 			f'{name}_e_type': e_type,
 			f'{name}_ids': batch['ids'],
-			f'{name}_b_embs': b_embs.detach(),
 		}
 		# if 't_labels' in batch:
 		# 	results[f'{name}_t_labels'] = list(batch['t_labels'])
