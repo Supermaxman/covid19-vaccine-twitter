@@ -183,11 +183,6 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		loss, accuracy = self._loss(pos_energy, neg_energy, batch['subj_obj_mask'])
 		return loss, accuracy
 
-	def _label_step(self, batch):
-		e_embs, m_embs = self(batch)
-		t_ex_embs = e_embs[:, 0]
-		return t_ex_embs, m_embs
-
 	def training_step(self, batch, batch_nb):
 		loss, accuracy = self._triplet_step(batch)
 		self.log('train_loss', loss)
@@ -209,8 +204,8 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		else:
 			if dataloader_idx == 0:
 				return self._triplet_eval_step(batch, 'val')
-			elif dataloader_idx == 1:
-				return self._label_eval_step(batch, 'val')
+			else:
+				return self._predict_step(batch, 'val')
 
 	def _predict_step(self, batch, name):
 		e_type = batch['e_type']
@@ -231,8 +226,12 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		results = {
 			f'{name}_e_type': e_type,
 			f'{name}_ids': batch['ids'],
-			f'{name}_b_embs': b_embs.detach()
+			f'{name}_b_embs': b_embs.detach(),
 		}
+		if 't_labels' in batch:
+			results[f'{name}_t_labels'] = batch['t_labels']
+		if 'm_examples' in batch:
+			results[f'{name}_m_examples'] = batch['m_examples']
 
 		return results
 
@@ -248,23 +247,9 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 
 		return result
 
-	def _label_eval_step(self, batch, name):
-		ex_embs, m_embs = self._label_step(batch)
-		ex_embs = ex_embs.detach()
-		m_embs = m_embs.detach()
-		result = {
-			f'{name}_ex_embs': ex_embs,
-			f'{name}_m_embs': m_embs,
-			f'{name}_labels': batch['labels'].detach(),
-			f'{name}_ids': batch['ids'],
-			f'{name}_m_ids': batch['m_ids'],
-		}
-
-		return result
-
 	def _eval_epoch_end(self, outputs, name):
 		if isinstance(outputs, list) and name == 'val':
-			triplet_eval_outputs, label_eval_outputs = outputs
+			triplet_eval_outputs, entity_outputs, rel_outputs = outputs
 			# triplet eval is dataloader_idx 0
 			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in triplet_eval_outputs], dim=0)
 			accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in triplet_eval_outputs], dim=0)
@@ -273,58 +258,33 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			self.log(f'{name}_loss', loss)
 			self.log(f'{name}_accuracy', accuracy)
 
-			# label eval is dataloader_idx 1
-			ex_embs = torch.cat([x[f'{name}_ex_embs'] for x in label_eval_outputs], dim=0)
-			m_embs = torch.cat([x[f'{name}_m_embs'] for x in label_eval_outputs], dim=0)
-			labels = torch.cat([x[f'{name}_labels'] for x in label_eval_outputs], dim=0)
-			ex_ids = [ex_id for x in label_eval_outputs for ex_id in x[f'{name}_ids']]
-			m_ids = [m_id for x in label_eval_outputs for m_id in x[f'{name}_m_ids']]
-			# collect all positive examples under each misinfo and take average embedding
-			m_ex_embs_list = defaultdict(list)
-			default_m_ex_emb = None
-			for ex_emb, m_label, m_id in zip(ex_embs, labels, m_ids):
-				if m_label > 0:
-					m_ex_embs_list[m_id].append(ex_emb)
-				if default_m_ex_emb is None:
-					default_m_ex_emb = torch.zeros_like(ex_emb)
-			m_ex_avg_embs = {}
-			for m_id, m_exs in m_ex_embs_list.items():
-				# average embedding for positive examples for m_id
-				# [emb_size]
-				# if len(m_exs) == 1:
-				# 	m_ex_emb = m_exs[0]
-				# else:
-				m_ex_emb = torch.stack(m_exs, dim=0).mean(dim=0)
-				m_ex_avg_embs[m_id] = m_ex_emb
+			e_embs = torch.cat([x[f'{name}_b_embs'] for x in entity_outputs], dim=0)
+			m_embs = torch.cat([x[f'{name}_b_embs'] for x in rel_outputs], dim=0)
+			e_ids = [e_id for x in entity_outputs for e_id in x[f'{name}_ids']]
+			m_ids = [m_id for x in rel_outputs for m_id in x[f'{name}_ids']]
+			t_labels = [t_label for x in entity_outputs for t_label in x[f'{name}_t_labels']]
+			m_examples = [m_ex for x in rel_outputs for m_ex in x[f'{name}_m_examples']]
 
-			# unroll avg embeddings across batch for easier calculation
-			m_ex_embs = []
-			for ex_id, m_id in zip(ex_ids, m_ids):
-				if m_id not in m_ex_avg_embs:
-					m_ex_emb = default_m_ex_emb
-				else:
-					m_ex_emb = m_ex_avg_embs[m_id]
-				m_ex_embs.append(m_ex_emb)
-			# [bsize, emb_size]
-			m_ex_embs = torch.stack(m_ex_embs, dim=0)
-			# max energy is inf, min energy is 0
-			m_ex_energies = self.emb_model.energy(ex_embs, m_embs, m_ex_embs)
-			# max score is 0, min score is -inf
-			# [bsize]
-			scores = -m_ex_energies
-			min_score = torch.min(scores).item()
-			max_score = torch.max(scores).item()
-			threshold_range = np.linspace(
-				min_score,
-				max_score,
-				num=100
+			entities = {e_id: e_emb for e_id, e_emb in zip(e_ids, e_embs)}
+			relations = {r_id: r_emb for r_id, r_emb in zip(m_ids, m_embs)}
+
+			m_thresholds = metric_utils.find_m_thresholds(
+				self.emb_model,
+				entities,
+				relations,
+				m_examples,
+				t_labels
 			)
-			f1, p, r, threshold = metric_utils.compute_threshold_f1(
-				scores,
-				labels,
-				self.threshold,
-				threshold_range
+
+			f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
+				self.emb_model,
+				entities,
+				relations,
+				m_examples,
+				t_labels,
+				m_thresholds
 			)
+
 			self.log(f'{name}_f1', f1)
 			self.log(f'{name}_p', p)
 			self.log(f'{name}_r', r)

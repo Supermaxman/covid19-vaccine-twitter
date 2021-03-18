@@ -1,3 +1,4 @@
+from collections import defaultdict
 
 import numpy as np
 import torch
@@ -51,3 +52,84 @@ def compute_threshold_f1(
 			max_vals = f1, p, r, threshold
 
 	return max_vals
+
+
+def find_m_thresholds(emb_model, entities, relations, m_examples, t_labels):
+	m_energies = defaultdict(list)
+	m_labels = defaultdict(list)
+	for t_id, t_emb in entities.items():
+		for m_id, m_emb in relations.items():
+			pos_t_ids = m_examples[m_id]
+			m_label = 1 if m_id in t_labels[t_id] else 0
+			p_e_embs = []
+			for pos_t_id in pos_t_ids:
+				p_e_emb = entities[pos_t_id]
+				p_e_embs.append(p_e_emb)
+			p_e_embs = torch.stack(p_e_embs, dim=0).mean(dim=0)
+			p_e = emb_model.energy(
+				head=t_emb,
+				rel=m_emb,
+				tail=p_e_embs
+			)
+			m_energies[m_id].append(p_e)
+			m_labels[m_id].append(m_label)
+	for m_id in m_energies:
+		m_energies[m_id] = torch.tensor(m_energies[m_id], dtype=torch.float)
+		m_labels[m_id] = torch.tensor(m_labels[m_id], dtype=torch.long)
+
+	m_thresholds = {}
+	for m_id, m_es in m_energies.items():
+		scores = -m_es
+		min_score = torch.min(scores).item()
+		max_score = torch.max(scores).item()
+		threshold_range = np.round(np.linspace(
+			min_score,
+			max_score,
+			num=100
+		), 4)
+		f1, p, r, threshold = compute_threshold_f1(
+			scores,
+			m_labels[m_id],
+			threshold_range=threshold_range,
+		)
+
+		m_thresholds[m_id] = threshold
+	return m_thresholds
+
+
+def evaluate_m_thresholds(emb_model, entities, relations, m_examples, t_labels, m_thresholds):
+	scores = []
+	labels = []
+	for t_id, t_emb in entities.items():
+		for m_id, m_emb in relations.items():
+			pos_t_ids = m_examples[m_id]
+			m_label = 1 if m_id in t_labels[t_id] else 0
+			p_e_embs = []
+			for pos_t_id in pos_t_ids:
+				p_e_emb = entities[pos_t_id]
+				p_e_embs.append(p_e_emb)
+			p_e_embs = torch.stack(p_e_embs, dim=0).mean(dim=0)
+			p_e = emb_model.energy(
+				head=t_emb,
+				rel=m_emb,
+				tail=p_e_embs
+			)
+			p_s = (-p_e).gt(m_thresholds[m_id]).float()
+			scores.append(p_s)
+			labels.append(m_label)
+	scores = torch.tensor(scores, dtype=torch.float)
+	labels = torch.tensor(labels, dtype=torch.long)
+
+	min_score = torch.min(scores).item()
+	max_score = torch.max(scores).item()
+	threshold_range = np.round(np.linspace(
+		min_score,
+		max_score,
+		num=100
+	), 4)
+	f1, p, r, threshold = compute_threshold_f1(
+		scores,
+		labels,
+		threshold_range=threshold_range,
+	)
+	return f1, p, r, threshold

@@ -133,31 +133,44 @@ if __name__ == '__main__':
 		worker_init_fn=val_triplet_dataset.worker_init_fn
 	)
 
-	val_neg_labeled_dataset = MisinfoDataset(
+	val_entity_dataset = MisinfoEntityDataset(
 		documents=val_data,
 		tokenizer=tokenizer,
-		misinfo=val_misinfo,
-		pos_samples=0,
-		neg_samples=0,
-		shuffle=False,
-		neg_labels=True,
+		misinfo=val_misinfo
 	)
-	val_neg_labeled_data_loader = DataLoader(
-		val_neg_labeled_dataset,
+
+	val_rel_dataset = MisinfoRelDataset(
+		misinfo=val_misinfo,
+		tokenizer=tokenizer,
+		m_examples=val_entity_dataset.m_examples
+	)
+
+	val_entity_data_loader = DataLoader(
+		val_entity_dataset,
 		num_workers=num_workers,
-		batch_size=args.batch_size,
+		batch_size=args.eval_batch_size,
 		shuffle=False,
-		collate_fn=MisinfoBatchCollator(
+		collate_fn=MisinfoPredictBatchCollator(
 			args.max_seq_len,
 			force_max_seq_len=args.use_tpus,
-		),
-		worker_init_fn=val_neg_labeled_dataset.worker_init_fn
+		)
+	)
+	val_rel_data_loader = DataLoader(
+		val_rel_dataset,
+		num_workers=num_workers,
+		batch_size=args.eval_batch_size,
+		shuffle=False,
+		collate_fn=MisinfoPredictBatchCollator(
+			args.max_seq_len,
+			force_max_seq_len=args.use_tpus,
+		)
 	)
 
 	logging.info(f'train_labels={train_dataset.num_labels}')
 	logging.info(f'train={train_size}')
 	logging.info(f'val_triplets={len(val_triplet_dataset)}')
-	logging.info(f'val_neg_labeled={len(val_neg_labeled_dataset)}')
+	logging.info(f'val_entities={len(val_entity_data_loader)}')
+	logging.info(f'val_rels={len(val_rel_data_loader)}')
 
 	num_batches_per_step = (len(gpus) if not args.use_tpus else tpu_cores)
 	updates_epoch = train_size // (args.batch_size * num_batches_per_step)
@@ -221,7 +234,11 @@ if __name__ == '__main__':
 		)
 	try:
 		logging.info('Training...')
-		trainer.fit(model, train_data_loader, val_dataloaders=[val_triplet_data_loader, val_neg_labeled_data_loader])
+		trainer.fit(
+			model,
+			train_data_loader,
+			val_dataloaders=[val_triplet_data_loader, val_entity_data_loader, val_rel_data_loader]
+		)
 
 		device_id = get_device_id()
 		if device_id == 0 or (isinstance(device_id, str) and '0' in device_id):

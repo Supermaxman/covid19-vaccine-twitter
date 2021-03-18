@@ -427,7 +427,9 @@ class MisinfoEntityDataset(Dataset):
 			self,
 			documents,
 			tokenizer,
+			misinfo
 	):
+		self.m_examples = defaultdict(list)
 		self.examples = []
 		for doc in tqdm(documents, desc='loading documents...'):
 			tweet_id = doc['id']
@@ -437,10 +439,19 @@ class MisinfoEntityDataset(Dataset):
 			token_data = tokenizer(
 				tweet_text
 			)
+			t_labels = set()
+			for m_id, m in misinfo.items():
+				d_misinfo = doc['misinfo']
+				if m_id in d_misinfo:
+					m_label = label_text_to_relevant_id(d_misinfo[m_id])
+					if m_label > 0:
+						t_labels.add(m_id)
+						self.m_examples[m_id].append(tweet_id)
 			ex = {
 				'id': tweet_id,
 				'e_type': 'entity',
-				'token_data': token_data
+				'token_data': token_data,
+				't_labels': t_labels
 			}
 			self.examples.append(ex)
 
@@ -459,6 +470,7 @@ class MisinfoRelDataset(Dataset):
 			self,
 			misinfo,
 			tokenizer,
+			m_examples
 	):
 		self.examples = []
 		for m_id, m in misinfo.items():
@@ -467,6 +479,7 @@ class MisinfoRelDataset(Dataset):
 			)
 			m['id'] = m_id
 			m['e_type'] = 'rel'
+			m['m_examples'] = m_examples
 			self.examples.append(m)
 
 	def __len__(self):
@@ -504,8 +517,14 @@ class MisinfoPredictBatchCollator:
 		attention_mask = torch.zeros([num_examples, pad_seq_len], dtype=torch.long)
 		token_type_ids = torch.zeros([num_examples, pad_seq_len], dtype=torch.long)
 		ids = []
+		m_examples = []
+		t_labels = []
 		for ex_idx, ex in enumerate(examples):
 			ids.append(ex['id'])
+			if 'm_examples' in ex:
+				m_examples.append(ex['m_examples'])
+			if 't_labels' in ex:
+				t_labels.append(ex['t_labels'])
 			self.pad_and_apply(ex['token_data']['input_ids'], input_ids, ex_idx)
 			self.pad_and_apply(ex['token_data']['attention_mask'], attention_mask, ex_idx)
 			self.pad_and_apply(ex['token_data']['token_type_ids'], token_type_ids, ex_idx)
@@ -519,6 +538,11 @@ class MisinfoPredictBatchCollator:
 			'attention_mask': attention_mask,
 			'token_type_ids': token_type_ids,
 		}
+		if len(m_examples) > 0:
+			batch['m_examples'] = m_examples
+
+		if len(t_labels) > 0:
+			batch['t_labels'] = t_labels
 
 		return batch
 

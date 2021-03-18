@@ -81,10 +81,12 @@ if __name__ == '__main__':
 	val_entity_dataset = MisinfoEntityDataset(
 		documents=val_data,
 		tokenizer=tokenizer,
+		misinfo=misinfo
 	)
 	val_rel_dataset = MisinfoRelDataset(
 		misinfo=misinfo,
-		tokenizer=tokenizer
+		tokenizer=tokenizer,
+		m_examples=val_entity_dataset.m_examples
 	)
 	val_entity_data_loader = DataLoader(
 		val_entity_dataset,
