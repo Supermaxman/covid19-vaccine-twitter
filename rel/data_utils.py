@@ -537,12 +537,13 @@ class MisinfoPredictBatchCollator:
 			'input_ids': input_ids,
 			'attention_mask': attention_mask,
 			'token_type_ids': token_type_ids,
+			'extra': {}
 		}
-		# if len(m_examples) > 0:
-		# 	batch['m_examples'] = m_examples
-		#
-		# if len(t_labels) > 0:
-		# 	batch['t_labels'] = t_labels
+		if len(m_examples) > 0:
+			batch['extra']['m_examples'] = m_examples
+
+		if len(t_labels) > 0:
+			batch['extra']['t_labels'] = t_labels
 
 		return batch
 
