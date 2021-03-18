@@ -479,7 +479,7 @@ class MisinfoRelDataset(Dataset):
 			)
 			m['id'] = m_id
 			m['e_type'] = 'rel'
-			m['m_examples'] = m_examples
+			m['m_examples'] = m_examples[m_id]
 			self.examples.append(m)
 
 	def __len__(self):
