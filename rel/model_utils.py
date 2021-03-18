@@ -228,11 +228,11 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			f'{name}_ids': batch['ids'],
 			f'{name}_b_embs': b_embs.detach(),
 		}
-		# if 't_labels' in batch:
-		# 	results[f'{name}_t_labels'] = batch['t_labels']
-		#
-		# if 'm_examples' in batch:
-		# 	results[f'{name}_m_examples'] = batch['m_examples']
+		if 't_labels' in batch:
+			results[f'{name}_t_labels'] = batch['t_labels']
+
+		if 'm_examples' in batch:
+			results[f'{name}_m_examples'] = batch['m_examples']
 		return results
 
 	def _triplet_eval_step(self, batch, name):
@@ -263,8 +263,8 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			m_embs = torch.cat([x[f'{name}_b_embs'] for x in rel_outputs], dim=0)
 			e_ids = [e_id for x in entity_outputs for e_id in x[f'{name}_ids']]
 			m_ids = [m_id for x in rel_outputs for m_id in x[f'{name}_ids']]
-			t_labels = [t_label for x in entity_outputs for t_label in x[f'{name}_t_labels']]
-			m_examples = [m_ex for x in rel_outputs for m_ex in x[f'{name}_m_examples']]
+			t_labels = [set(t_label.split(',')) for x in entity_outputs for t_label in x[f'{name}_t_labels']]
+			m_examples = [m_ex.split(',') for x in rel_outputs for m_ex in x[f'{name}_m_examples']]
 
 			entities = {e_id: e_emb for e_id, e_emb in zip(e_ids, e_embs)}
 			relations = {r_id: r_emb for r_id, r_emb in zip(m_ids, m_embs)}

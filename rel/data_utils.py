@@ -522,9 +522,9 @@ class MisinfoPredictBatchCollator:
 		for ex_idx, ex in enumerate(examples):
 			ids.append(ex['id'])
 			if 'm_examples' in ex:
-				m_examples.append(ex['m_examples'])
+				m_examples.append(','.join(ex['m_examples']))
 			if 't_labels' in ex:
-				t_labels.append(ex['t_labels'])
+				t_labels.append(','.join(ex['t_labels']))
 			self.pad_and_apply(ex['token_data']['input_ids'], input_ids, ex_idx)
 			self.pad_and_apply(ex['token_data']['attention_mask'], attention_mask, ex_idx)
 			self.pad_and_apply(ex['token_data']['token_type_ids'], token_type_ids, ex_idx)
@@ -536,14 +536,13 @@ class MisinfoPredictBatchCollator:
 			'pad_seq_len': pad_seq_len,
 			'input_ids': input_ids,
 			'attention_mask': attention_mask,
-			'token_type_ids': token_type_ids,
-			'extra': {}
+			'token_type_ids': token_type_ids
 		}
 		if len(m_examples) > 0:
-			batch['extra']['m_examples'] = m_examples
+			batch['m_examples'] = m_examples
 
 		if len(t_labels) > 0:
-			batch['extra']['t_labels'] = t_labels
+			batch['t_labels'] = t_labels
 
 		return batch
 
