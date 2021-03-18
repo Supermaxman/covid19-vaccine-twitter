@@ -234,10 +234,10 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		}
 		print(f'{e_type}_predict_step5')
 		if 't_labels' in batch:
-			results[f'{name}_t_labels'] = batch['t_labels']
+			results[f'{name}_t_labels'] = list(batch['t_labels'])
 		print(f'{e_type}_predict_step6')
 		if 'm_examples' in batch:
-			results[f'{name}_m_examples'] = batch['m_examples']
+			results[f'{name}_m_examples'] = list(batch['m_examples'])
 		print(f'{e_type}_predict_step7')
 		print(results)
 		return results
