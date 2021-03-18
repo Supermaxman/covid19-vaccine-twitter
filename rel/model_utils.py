@@ -270,6 +270,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			entities = {e_id: e_emb for e_id, e_emb in zip(e_ids, e_embs)}
 			relations = {r_id: r_emb for r_id, r_emb in zip(m_ids, m_embs)}
 
+			print(f'find_m_thresholds')
 			m_thresholds = metric_utils.find_m_thresholds(
 				self.emb_model,
 				entities,
