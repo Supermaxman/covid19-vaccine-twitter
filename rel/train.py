@@ -169,8 +169,8 @@ if __name__ == '__main__':
 	logging.info(f'train_labels={train_dataset.num_labels}')
 	logging.info(f'train={train_size}')
 	logging.info(f'val_triplets={len(val_triplet_dataset)}')
-	logging.info(f'val_entities={len(val_entity_data_loader)}')
-	logging.info(f'val_rels={len(val_rel_data_loader)}')
+	logging.info(f'val_entities={len(val_entity_dataset)}')
+	logging.info(f'val_rels={len(val_rel_dataset)}')
 
 	num_batches_per_step = (len(gpus) if not args.use_tpus else tpu_cores)
 	updates_epoch = train_size // (args.batch_size * num_batches_per_step)
