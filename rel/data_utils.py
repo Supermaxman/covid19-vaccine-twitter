@@ -439,13 +439,13 @@ class MisinfoEntityDataset(Dataset):
 			token_data = tokenizer(
 				tweet_text
 			)
-			t_labels = set()
+			t_labels = []
 			for m_id, m in misinfo.items():
 				d_misinfo = doc['misinfo']
 				if m_id in d_misinfo:
 					m_label = label_text_to_relevant_id(d_misinfo[m_id])
 					if m_label > 0:
-						t_labels.add(m_id)
+						t_labels.append(m_id)
 						self.m_examples[m_id].append(tweet_id)
 			ex = {
 				'id': tweet_id,

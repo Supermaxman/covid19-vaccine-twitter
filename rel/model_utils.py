@@ -204,9 +204,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		else:
 			if dataloader_idx == 0:
 				return self._triplet_eval_step(batch, 'val')
-			elif dataloader_idx == 1:
-				return self._predict_step(batch, 'val')
-			elif dataloader_idx == 2:
+			else:
 				return self._predict_step(batch, 'val')
 
 	def _predict_step(self, batch, name):
@@ -226,15 +224,15 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		b_embs = self.emb_model(lm_output, e_type)
 
 		results = {
-			f'{name}_b_embs': b_embs,
-			# f'{name}_e_type': e_type,
-			# f'{name}_ids': batch['ids'],
+			f'{name}_e_type': e_type,
+			f'{name}_ids': batch['ids'],
+			f'{name}_b_embs': b_embs.detach(),
 		}
-		# if 't_labels' in batch:
-		# 	results[f'{name}_t_labels'] = list(batch['t_labels'])
-		# print(f'{e_type}_predict_step6')
-		# if 'm_examples' in batch:
-		# 	results[f'{name}_m_examples'] = list(batch['m_examples'])
+		if 't_labels' in batch:
+			results[f'{name}_t_labels'] = batch['t_labels']
+
+		if 'm_examples' in batch:
+			results[f'{name}_m_examples'] = batch['m_examples']
 		return results
 
 	def _triplet_eval_step(self, batch, name):
