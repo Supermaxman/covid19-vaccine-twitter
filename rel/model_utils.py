@@ -249,7 +249,6 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 
 	def _eval_epoch_end(self, outputs, name):
 		if isinstance(outputs, list) and name == 'val':
-			print(f'_eval_epoch_end')
 			triplet_eval_outputs, entity_outputs, rel_outputs = outputs
 			# triplet eval is dataloader_idx 0
 			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in triplet_eval_outputs], dim=0)
@@ -270,8 +269,8 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			relations = {r_id: r_emb for r_id, r_emb in zip(m_ids, m_embs)}
 			t_labels = {t_id: t_l for t_id, t_l in zip(e_ids, t_labels)}
 			m_examples = {m_id: m_e for m_id, m_e in zip(m_ids, m_examples)}
-
-			print(f'find_m_thresholds')
+			if len(entities) < 100:
+				return
 			m_thresholds = metric_utils.find_m_thresholds(
 				self.emb_model,
 				entities,
