@@ -312,10 +312,12 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			# max score is 0, min score is -inf
 			# [bsize]
 			scores = -m_ex_energies
-			threshold_range = np.arange(
-				start=-10.00,
-				stop=0.00,
-				step=0.01
+			min_score = torch.min(scores).item()
+			max_score = torch.max(scores).item()
+			threshold_range = np.linspace(
+				min_score,
+				max_score,
+				num=100
 			)
 			f1, p, r, threshold = metric_utils.compute_threshold_f1(
 				scores,
