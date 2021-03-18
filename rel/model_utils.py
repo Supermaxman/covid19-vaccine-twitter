@@ -204,7 +204,9 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		else:
 			if dataloader_idx == 0:
 				return self._triplet_eval_step(batch, 'val')
-			else:
+			elif dataloader_idx == 1:
+				return self._predict_step(batch, 'val')
+			elif dataloader_idx == 2:
 				return self._predict_step(batch, 'val')
 
 	def _predict_step(self, batch, name):
