@@ -477,9 +477,6 @@ class MisinfoRelDataset(Dataset):
 			m_token_data = tokenizer(
 				m['text']
 			)
-			m['id'] = m_id
-			m['e_type'] = 'rel'
-			m['m_examples'] = m_examples[m_id]
 			m_ex = {
 				'id': m_id,
 				'e_type': 'rel',
