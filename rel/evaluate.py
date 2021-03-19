@@ -212,6 +212,8 @@ if __name__ == '__main__':
 		with open(results_path, 'w') as f:
 			json.dump(results, f, indent=2)
 		print(results)
+		print(f'P\tR\tF1')
+		print(f'{results["test_p"]:.4f}\t{results["test_r"]:.4f}\tt{results["test_f1"]:.4f}')
 	except Exception as e:
 		logging.exception('Exception during evaluation', exc_info=e)
 
