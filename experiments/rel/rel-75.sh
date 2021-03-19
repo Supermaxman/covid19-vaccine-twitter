@@ -79,7 +79,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
 fi
 
 if [[ ${MISINFO_PREDICT} = true ]]; then
-    echo "Running dev misinfo..."
+    echo "Predicting dev misinfo..."
     python rel/predict.py \
       --emb_size ${MISINFO_EMB_SIZE} \
       --emb_model ${MISINFO_EMB_MODEL} \
@@ -96,6 +96,7 @@ if [[ ${MISINFO_PREDICT} = true ]]; then
 fi
 
 if [[ ${MISINFO_EVAL} = true ]]; then
+    echo "Evaluating misinfo model..."
     python rel/evaluate.py \
       --emb_size ${MISINFO_EMB_SIZE} \
       --emb_model ${MISINFO_EMB_MODEL} \

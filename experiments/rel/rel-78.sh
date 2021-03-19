@@ -27,9 +27,9 @@ MISINFO_TRAIN_EPOCHS=40
 MISINFO_EVAL_BATCH_SIZE=8
 
 MISINFO_NUM_GPUS=1
-MISINFO_TRAIN=true
-MISINFO_RUN=false
-MISINFO_EVAL=false
+MISINFO_TRAIN=false
+MISINFO_PREDICT=false
+MISINFO_EVAL=true
 
 export TOKENIZERS_PARALLELISM=true
 
@@ -78,64 +78,41 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --gpus ${MISINFO_TRAIN_GPUS}
 fi
 
-#if [[ ${MISINFO_RUN} = true ]]; then
-#    echo "Running dev misinfo..."
-#    python identify/predict.py \
-#      --model_type ${MISINFO_MODEL_TYPE} \
-#      --losses ${MISINFO_LOSSES} \
-#      --emb_size ${MISINFO_EMB_SIZE} \
-#      --misinfo_path ${DATASET_PATH}/misinfo.json \
-#      --val_path ${DATASET_PATH}/dev.jsonl \
-#      --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
-#      --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
-#      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
-#      --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
-#      --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
-#      --train_sampling ${MISINFO_TRAIN_SAMPLING} \
-#      --gpus ${MISINFO_EVAL_GPUS} \
-#    ; \
-#    python identify/format_predictions.py \
-#      --input_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
-#      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/dev_scores.json
-#
-#    echo "Running test misinfo..."
-#    python identify/predict.py \
-#      --model_type ${MISINFO_MODEL_TYPE} \
-#      --losses ${MISINFO_LOSSES} \
-#      --emb_size ${MISINFO_EMB_SIZE} \
-#      --misinfo_path ${DATASET_PATH}/misinfo.json \
-#      --val_path ${DATASET_PATH}/test.jsonl \
-#      --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
-#      --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
-#      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_TEST \
-#      --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
-#      --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
-#      --train_sampling ${MISINFO_TRAIN_SAMPLING} \
-#      --gpus ${MISINFO_EVAL_GPUS} \
-#    ; \
-#    python identify/format_predictions.py \
-#      --input_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_TEST \
-#      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json
-#fi
+if [[ ${MISINFO_PREDICT} = true ]]; then
+    echo "Predicting dev misinfo..."
+    python rel/predict.py \
+      --emb_size ${MISINFO_EMB_SIZE} \
+      --emb_model ${MISINFO_EMB_MODEL} \
+      --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
+      --misinfo_path ${DATASET_PATH}/misinfo.json \
+      --val_path ${DATASET_PATH}/dev.jsonl \
+      --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
+      --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
+      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
+      --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
+      --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
+      --gpus ${MISINFO_EVAL_GPUS}
 
+fi
+
+if [[ ${MISINFO_EVAL} = true ]]; then
+    echo "Evaluating misinfo model..."
+    python rel/evaluate.py \
+      --emb_size ${MISINFO_EMB_SIZE} \
+      --emb_model ${MISINFO_EMB_MODEL} \
+      --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
+      --misinfo_path ${DATASET_PATH}/misinfo.json \
+      --val_path ${DATASET_PATH}/dev.jsonl \
+      --test_path ${DATASET_PATH}/test.jsonl \
+      --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
+      --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
+      --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
+      --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
+      --gpus ${MISINFO_EVAL_GPUS}
+
+fi
 
 echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
 python gpu/free_gpus.py -i ${MISINFO_GPUS}
-#
-#if [[ ${MISINFO_EVAL} = true ]]; then
-#    echo "Evaluating misinfo model..."
-#    python identify/score_predict.py \
-#      --train_path ${DATASET_PATH}/dev.jsonl \
-#      --val_path ${DATASET_PATH}/test.jsonl \
-#      --misinfo_path ${DATASET_PATH}/misinfo.json \
-#      --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
-#      --train_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/dev_scores.json \
-#      --val_score_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/test_scores.json \
-#      --threshold_min ${MISINFO_THRESHOLD_MIN} \
-#      --threshold_max ${MISINFO_THRESHOLD_MAX} \
-#      --threshold_step ${MISINFO_THRESHOLD_STEP} \
-#      > ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt \
-#      ; \
-#      tail -n 1 ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}/results.txt
-#fi
+
 
