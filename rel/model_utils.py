@@ -307,8 +307,8 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			name
 		)
 		test_entities, test_relations, _, test_t_labels = self._extract_embeddings(
-			val_entity_outputs,
-			val_rel_outputs,
+			test_entity_outputs,
+			test_rel_outputs,
 			name
 		)
 

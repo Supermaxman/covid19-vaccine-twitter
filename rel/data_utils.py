@@ -474,13 +474,19 @@ class MisinfoRelDataset(Dataset):
 	):
 		self.examples = []
 		for m_id, m in misinfo.items():
-			m['token_data'] = tokenizer(
+			m_token_data = tokenizer(
 				m['text']
 			)
 			m['id'] = m_id
 			m['e_type'] = 'rel'
 			m['m_examples'] = m_examples[m_id]
-			self.examples.append(m)
+			m_ex = {
+				'id': m_id,
+				'e_type': 'rel',
+				'm_examples': m_examples[m_id],
+				'token_data': m_token_data
+			}
+			self.examples.append(m_ex)
 
 	def __len__(self):
 		return len(self.examples)
