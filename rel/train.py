@@ -29,6 +29,7 @@ if __name__ == '__main__':
 	parser.add_argument('-cd', '--torch_cache_dir', default=None)
 	parser.add_argument('-tpu', '--use_tpus', default=False, action='store_true')
 	parser.add_argument('-lr', '--learning_rate', default=5e-6, type=float)
+	parser.add_argument('-lrw', '--lr_warmup', default=0.1, type=float)
 	parser.add_argument('-ga', '--gamma', default=0.5, type=float)
 	parser.add_argument('-gpu', '--gpus', default='0')
 	parser.add_argument('-lt', '--load_checkpoint', default=None)
@@ -180,7 +181,7 @@ if __name__ == '__main__':
 	model = CovidTwitterMisinfoModel(
 		pre_model_name=args.pre_model_name,
 		learning_rate=args.learning_rate,
-		lr_warmup=0.1,
+		lr_warmup=args.lr_warmup,
 		updates_total=updates_total,
 		weight_decay=args.weight_decay,
 		threshold=args.threshold,
