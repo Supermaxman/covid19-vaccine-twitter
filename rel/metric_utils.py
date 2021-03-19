@@ -54,7 +54,7 @@ def compute_threshold_f1(
 	return max_vals
 
 
-def find_m_thresholds(emb_model, entities, relations, m_examples, t_labels):
+def find_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_labels):
 	m_energies = defaultdict(list)
 	m_labels = defaultdict(list)
 	for t_id, t_emb in entities.items():
@@ -63,7 +63,7 @@ def find_m_thresholds(emb_model, entities, relations, m_examples, t_labels):
 			m_label = 1 if m_id in t_labels[t_id] else 0
 			p_e_embs = []
 			for pos_t_id in pos_t_ids:
-				p_e_emb = entities[pos_t_id]
+				p_e_emb = m_entities[pos_t_id]
 				p_e_embs.append(p_e_emb)
 			p_e_embs = torch.stack(p_e_embs, dim=0).mean(dim=0)
 			p_e = emb_model.energy(
@@ -97,7 +97,7 @@ def find_m_thresholds(emb_model, entities, relations, m_examples, t_labels):
 	return m_thresholds
 
 
-def evaluate_m_thresholds(emb_model, entities, relations, m_examples, t_labels, m_thresholds):
+def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_labels, m_thresholds):
 	scores = []
 	labels = []
 	for t_id, t_emb in entities.items():
@@ -106,7 +106,7 @@ def evaluate_m_thresholds(emb_model, entities, relations, m_examples, t_labels, 
 			m_label = 1 if m_id in t_labels[t_id] else 0
 			p_e_embs = []
 			for pos_t_id in pos_t_ids:
-				p_e_emb = entities[pos_t_id]
+				p_e_emb = m_entities[pos_t_id]
 				p_e_embs.append(p_e_emb)
 			p_e_embs = torch.stack(p_e_embs, dim=0).mean(dim=0)
 			p_e = emb_model.energy(

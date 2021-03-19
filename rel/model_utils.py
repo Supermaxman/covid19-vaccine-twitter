@@ -192,11 +192,8 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		}
 		return result
 
-	def test_step(self, batch, batch_nb):
-		if self.predict_mode:
-			return self._predict_step(batch, 'test')
-		else:
-			return self._triplet_eval_step(batch, 'test')
+	def test_step(self, batch, batch_nb, dataloader_idx):
+		return self._predict_step(batch, 'test')
 
 	def validation_step(self, batch, batch_nb, dataloader_idx):
 		if self.predict_mode:
@@ -247,61 +244,113 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 
 		return result
 
-	def _eval_epoch_end(self, outputs, name):
-		if isinstance(outputs, list) and name == 'val':
-			triplet_eval_outputs, entity_outputs, rel_outputs = outputs
-			# triplet eval is dataloader_idx 0
-			loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in triplet_eval_outputs], dim=0)
-			accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in triplet_eval_outputs], dim=0)
-			loss = loss.mean()
-			accuracy = accuracy.mean()
-			self.log(f'{name}_loss', loss)
-			self.log(f'{name}_accuracy', accuracy)
+	def _val_epoch_end(self, outputs, name):
+		triplet_eval_outputs, val_entity_outputs, val_rel_outputs = outputs
+		# triplet eval is dataloader_idx 0
+		loss = torch.cat([x[f'{name}_batch_loss'].flatten() for x in triplet_eval_outputs], dim=0)
+		accuracy = torch.cat([x[f'{name}_batch_accuracy'].flatten() for x in triplet_eval_outputs], dim=0)
+		loss = loss.mean()
+		accuracy = accuracy.mean()
+		self.log(f'{name}_loss', loss)
+		self.log(f'{name}_accuracy', accuracy)
 
-			e_embs = torch.cat([x[f'{name}_b_embs'] for x in entity_outputs], dim=0)
-			m_embs = torch.cat([x[f'{name}_b_embs'] for x in rel_outputs], dim=0)
-			e_ids = [e_id for x in entity_outputs for e_id in x[f'{name}_ids']]
-			m_ids = [m_id for x in rel_outputs for m_id in x[f'{name}_ids']]
-			t_labels = [set(t_label.split(',')) for x in entity_outputs for t_label in x[f'{name}_t_labels']]
-			m_examples = [m_ex.split(',') for x in rel_outputs for m_ex in x[f'{name}_m_examples']]
+		dev_entities, dev_relations, dev_m_examples, dev_t_labels = self._extract_embeddings(
+			val_entity_outputs,
+			val_rel_outputs,
+			name
+		)
+		# due to test val step causing missing entities at train start
+		if len(dev_entities) < 100:
+			return
+		m_thresholds = metric_utils.find_m_thresholds(
+			self.emb_model,
+			dev_entities,
+			dev_relations,
+			dev_m_examples,
+			dev_entities,
+			dev_t_labels
+		)
 
-			entities = {e_id: e_emb for e_id, e_emb in zip(e_ids, e_embs)}
-			relations = {r_id: r_emb for r_id, r_emb in zip(m_ids, m_embs)}
-			t_labels = {t_id: t_l for t_id, t_l in zip(e_ids, t_labels)}
-			m_examples = {m_id: m_e for m_id, m_e in zip(m_ids, m_examples)}
-			if len(entities) < 100:
-				return
-			m_thresholds = metric_utils.find_m_thresholds(
-				self.emb_model,
-				entities,
-				relations,
-				m_examples,
-				t_labels
-			)
+		f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
+			self.emb_model,
+			dev_entities,
+			dev_relations,
+			dev_m_examples,
+			dev_entities,
+			dev_t_labels,
+			m_thresholds
+		)
 
-			f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
-				self.emb_model,
-				entities,
-				relations,
-				m_examples,
-				t_labels,
-				m_thresholds
-			)
+		self.log(f'{name}_f1', f1)
+		self.log(f'{name}_p', p)
+		self.log(f'{name}_r', r)
 
-			self.log(f'{name}_f1', f1)
-			self.log(f'{name}_p', p)
-			self.log(f'{name}_r', r)
-			self.log(f'{name}_threshold', threshold)
+	def _extract_embeddings(self, entity_outputs, rel_outputs, name):
+		e_embs = torch.cat([x[f'{name}_b_embs'] for x in entity_outputs], dim=0)
+		m_embs = torch.cat([x[f'{name}_b_embs'] for x in rel_outputs], dim=0)
+		e_ids = [e_id for x in entity_outputs for e_id in x[f'{name}_ids']]
+		m_ids = [m_id for x in rel_outputs for m_id in x[f'{name}_ids']]
+		t_labels = [set(t_label.split(',')) for x in entity_outputs for t_label in x[f'{name}_t_labels']]
+		m_examples = [m_ex.split(',') for x in rel_outputs for m_ex in x[f'{name}_m_examples']]
+		entities = {e_id: e_emb for e_id, e_emb in zip(e_ids, e_embs)}
+		relations = {r_id: r_emb for r_id, r_emb in zip(m_ids, m_embs)}
+		t_labels = {t_id: t_l for t_id, t_l in zip(e_ids, t_labels)}
+		m_examples = {m_id: m_e for m_id, m_e in zip(m_ids, m_examples)}
+		return entities, relations, m_examples, t_labels
+
+	def _test_epoch_end(self, outputs, name):
+		val_entity_outputs, val_rel_outputs, test_entity_outputs, test_rel_outputs = outputs
+
+		dev_entities, dev_relations, dev_m_examples, dev_t_labels = self._extract_embeddings(
+			val_entity_outputs,
+			val_rel_outputs,
+			name
+		)
+		test_entities, test_relations, _, test_t_labels = self._extract_embeddings(
+			val_entity_outputs,
+			val_rel_outputs,
+			name
+		)
+
+		m_thresholds = metric_utils.find_m_thresholds(
+			self.emb_model,
+			dev_entities,
+			dev_relations,
+			dev_m_examples,
+			dev_entities,
+			dev_t_labels
+		)
+
+		f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
+			self.emb_model,
+			test_entities,
+			test_relations,
+			dev_m_examples,
+			dev_entities,
+			test_t_labels,
+			m_thresholds
+		)
+		results = {
+			'f1': f1,
+			'p': p,
+			'r': r,
+			'm_thresholds': m_thresholds
+		}
+
+		self.log(f'{name}_f1', f1)
+		self.log(f'{name}_p', p)
+		self.log(f'{name}_r', r)
+		return results
 
 	def validation_epoch_end(self, outputs):
 		if not self.predict_mode:
-			self._eval_epoch_end(outputs, 'val')
+			self._val_epoch_end(outputs, 'val')
 		else:
 			self._predict_epoch_end(outputs, 'val')
 
 	def test_epoch_end(self, outputs):
 		if not self.predict_mode:
-			self._eval_epoch_end(outputs, 'test')
+			return self._test_epoch_end(outputs, 'test')
 		else:
 			self._predict_epoch_end(outputs, 'test')
 
@@ -331,7 +380,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		)
 		scheduler = get_linear_schedule_with_warmup(
 			optimizer,
-			num_warmup_steps=self.lr_warmup * self.updates_total,
+			num_warmup_steps=int(self.lr_warmup * self.updates_total),
 			num_training_steps=self.updates_total
 		)
 		return [optimizer], [scheduler]

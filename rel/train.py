@@ -26,7 +26,6 @@ if __name__ == '__main__':
 	parser.add_argument('-ml', '--max_seq_len', default=96, type=int)
 	parser.add_argument('-se', '--seed', default=0, type=int)
 	parser.add_argument('-eo', '--epochs', default=10, type=int)
-	parser.add_argument('-cd', '--torch_cache_dir', default=None)
 	parser.add_argument('-tpu', '--use_tpus', default=False, action='store_true')
 	parser.add_argument('-lr', '--learning_rate', default=5e-6, type=float)
 	parser.add_argument('-lrw', '--lr_warmup', default=0.1, type=float)
@@ -189,7 +188,6 @@ if __name__ == '__main__':
 		emb_size=args.emb_size,
 		emb_loss_norm=args.emb_loss_norm,
 		gamma=args.gamma,
-		torch_cache_dir=args.torch_cache_dir,
 		load_pretrained=args.load_checkpoint is not None,
 	)
 

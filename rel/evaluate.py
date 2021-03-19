@@ -17,7 +17,7 @@ import torch
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-vp', '--val_path', required=True)
-	parser.add_argument('-op', '--output_path', required=True)
+	parser.add_argument('-tp', '--test_path', required=True)
 	parser.add_argument('-pm', '--pre_model_name', default='nboost/pt-biobert-base-msmarco')
 	parser.add_argument('-mn', '--model_name', default='pt-biobert-base-msmarco')
 	parser.add_argument('-sd', '--save_directory', default='models')
@@ -40,6 +40,7 @@ if __name__ == '__main__':
 		os.mkdir(save_directory)
 
 	checkpoint_path = os.path.join(save_directory, 'pytorch_model.bin')
+	results_path = os.path.join(save_directory, 'results.json')
 
 	# export TPU_IP_ADDRESS=10.155.6.34
 	# export XRT_TPU_CONFIG="tpu_worker;0;$TPU_IP_ADDRESS:8470"
@@ -56,7 +57,7 @@ if __name__ == '__main__':
 	for handler in logging.root.handlers[:]:
 		logging.root.removeHandler(handler)
 
-	logfile = os.path.join(save_directory, "train_output.log")
+	logfile = os.path.join(save_directory, "eval_output.log")
 	logging.basicConfig(
 		level=logging.INFO,
 		format="%(asctime)s [%(levelname)s] %(message)s",
@@ -69,6 +70,8 @@ if __name__ == '__main__':
 	tokenizer = BertTokenizerFast.from_pretrained(args.pre_model_name)
 	logging.info(f'Loading val dataset: {args.val_path}')
 	val_data = read_jsonl(args.val_path)
+	logging.info(f'Loading test dataset: {args.test_path}')
+	test_data = read_jsonl(args.test_path)
 
 	logging.info(f'Loading misinfo: {args.misinfo_path}')
 	with open(args.misinfo_path, 'r') as f:
@@ -107,14 +110,48 @@ if __name__ == '__main__':
 			force_max_seq_len=args.use_tpus,
 		)
 	)
+	test_entity_dataset = MisinfoEntityDataset(
+		documents=test_data,
+		tokenizer=tokenizer,
+		misinfo=misinfo
+	)
+	test_rel_dataset = MisinfoRelDataset(
+		misinfo=misinfo,
+		tokenizer=tokenizer,
+		m_examples=test_entity_dataset.m_examples
+	)
+	test_entity_data_loader = DataLoader(
+		test_entity_dataset,
+		num_workers=num_workers,
+		batch_size=args.eval_batch_size,
+		shuffle=False,
+		collate_fn=MisinfoPredictBatchCollator(
+			args.max_seq_len,
+			force_max_seq_len=args.use_tpus,
+		)
+	)
+	test_rel_data_loader = DataLoader(
+		test_rel_dataset,
+		num_workers=num_workers,
+		batch_size=args.eval_batch_size,
+		shuffle=False,
+		collate_fn=MisinfoPredictBatchCollator(
+			args.max_seq_len,
+			force_max_seq_len=args.use_tpus,
+		)
+	)
+
 	logging.info(f'val_entities={len(val_entity_dataset)}')
 	logging.info(f'val_rels={len(val_rel_dataset)}')
+
+	logging.info(f'test_entities={len(test_entity_dataset)}')
+	logging.info(f'test_rels={len(test_rel_dataset)}')
 
 	logging.info('Loading model...')
 	model = CovidTwitterMisinfoModel(
 		pre_model_name=args.pre_model_name,
 		learning_rate=0,
-		lr_warmup=0.1,
+		lr_warmup=0.0,
 		updates_total=0,
 		weight_decay=0,
 		emb_model=args.emb_model,
@@ -122,8 +159,6 @@ if __name__ == '__main__':
 		emb_loss_norm=args.emb_loss_norm,
 		gamma=0.0,
 		load_pretrained=True,
-		predict_mode=True,
-		predict_path=args.output_path
 	)
 
 	# load checkpoint
@@ -163,11 +198,21 @@ if __name__ == '__main__':
 			checkpoint_callback=False,
 		)
 
-	logging.info('Predicting...')
+	logging.info('Evaluating...')
 	try:
-		trainer.test(model, val_rel_data_loader)
-		trainer.test(model, val_entity_data_loader)
+		results = trainer.test(
+			model,
+			test_dataloaders=[
+				val_entity_data_loader,
+				val_rel_data_loader,
+				test_entity_data_loader,
+				test_rel_data_loader,
+			]
+		)
+		with open(results_path, 'w') as f:
+			json.dump(results, f, indent=2)
+		print(results)
 	except Exception as e:
-		logging.exception('Exception during predicting', exc_info=e)
+		logging.exception('Exception during evaluation', exc_info=e)
 
 
