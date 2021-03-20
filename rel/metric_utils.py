@@ -1,3 +1,4 @@
+
 from collections import defaultdict
 
 import numpy as np
@@ -5,7 +6,6 @@ import torch
 
 
 def get_predictions(logits, threshold):
-	# normalize over
 	predictions = (logits.gt(threshold)).long()
 	return predictions
 
@@ -73,12 +73,14 @@ def find_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_
 			)
 			m_energies[m_id].append(p_e)
 			m_labels[m_id].append(m_label)
+	m_f_energies = {}
+	m_f_labels = {}
 	for m_id in m_energies:
-		m_energies[m_id] = torch.tensor(m_energies[m_id], dtype=torch.float)
-		m_labels[m_id] = torch.tensor(m_labels[m_id], dtype=torch.long)
+		m_f_energies[m_id] = torch.tensor(m_energies[m_id], dtype=torch.float)
+		m_f_labels[m_id] = torch.tensor(m_labels[m_id], dtype=torch.long)
 
 	m_thresholds = {}
-	for m_id, m_es in m_energies.items():
+	for m_id, m_es in m_f_energies.items():
 		scores = -m_es
 		min_score = torch.min(scores).item()
 		max_score = torch.max(scores).item()
@@ -89,7 +91,7 @@ def find_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_
 		), 4)
 		f1, p, r, threshold = compute_threshold_f1(
 			scores,
-			m_labels[m_id],
+			m_f_labels[m_id],
 			threshold_range=threshold_range,
 		)
 

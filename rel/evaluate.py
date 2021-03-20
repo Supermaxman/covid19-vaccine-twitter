@@ -1,8 +1,10 @@
 
-import os
-import json
 import argparse
 import logging
+
+# pytorch_lightning can cause issues if
+# torch or other torch libraries are imported first
+# noinspection PyUnresolvedReferences
 import pytorch_lightning as pl
 from transformers import BertTokenizerFast
 from torch.utils.data import DataLoader
@@ -216,5 +218,3 @@ if __name__ == '__main__':
 		print(f'{results[0]["test_p"]:.4f}\t{results[0]["test_r"]:.4f}\t{results[0]["test_f1"]:.4f}')
 	except Exception as e:
 		logging.exception('Exception during evaluation', exc_info=e)
-
-

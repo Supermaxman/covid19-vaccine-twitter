@@ -1,12 +1,10 @@
 
 import os
-from collections import defaultdict
 
 import pytorch_lightning as pl
 from transformers import BertModel, BertConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 import torch.distributed as dist
-import numpy as np
 
 import metric_utils
 from emb_utils import *
@@ -151,7 +149,8 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 
 		return pos_energy, neg_energy
 
-	def _split_embeddings(self, embs, batch):
+	@staticmethod
+	def _split_embeddings(embs, batch):
 		t_ex_embs = embs[:, 0]
 		pos_samples = batch['pos_samples']
 		if pos_samples > 0:
@@ -285,7 +284,8 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		self.log(f'{name}_p', p)
 		self.log(f'{name}_r', r)
 
-	def _extract_embeddings(self, entity_outputs, rel_outputs, name):
+	@staticmethod
+	def _extract_embeddings(entity_outputs, rel_outputs, name):
 		e_embs = torch.cat([x[f'{name}_b_embs'] for x in entity_outputs], dim=0)
 		m_embs = torch.cat([x[f'{name}_b_embs'] for x in rel_outputs], dim=0)
 		e_ids = [e_id for x in entity_outputs for e_id in x[f'{name}_ids']]
@@ -389,8 +389,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		param_optimizer = list(self.named_parameters())
 		no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
 		optimizer_params = [
-			{'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-			 'weight_decay': weight_decay},
+			{'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': weight_decay},
 			{'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}]
 
 		return optimizer_params
@@ -405,4 +404,3 @@ def get_device_id():
 		else:
 			device_id = 0
 	return device_id
-

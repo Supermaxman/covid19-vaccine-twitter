@@ -1,19 +1,11 @@
 
 import json
-import os
-import json
-from typing import Iterator
+from collections import defaultdict
 
 import torch
-from torch.utils.data import Dataset, Sampler
+from torch.utils.data import Dataset
 from tqdm import tqdm
-import random
-from collections import defaultdict
 import numpy as np
-import string
-import spacy
-import pickle
-import zlib
 
 
 def read_jsonl(path):
@@ -32,22 +24,6 @@ def write_jsonl(data, path):
 		for example in data:
 			json_data = json.dumps(example)
 			f.write(json_data + '\n')
-
-
-def load_dataset(split_path, dataset_args, name):
-	args_string = str(zlib.adler32(str(dataset_args).encode('utf-8')))
-
-	cache_path = split_path + f'_{name}_{args_string}.cache'
-	if os.path.exists(cache_path):
-		with open(cache_path, 'rb') as f:
-			dataset = pickle.load(f)
-	else:
-		dataset = MisinfoDataset(
-			**dataset_args
-		)
-		with open(cache_path, 'wb') as f:
-			pickle.dump(dataset, f)
-	return dataset
 
 
 def label_text_to_stance_id(label):
@@ -86,8 +62,8 @@ def format_predictions(preds, labels):
 	return values
 
 
-def flatten(l):
-	return [item for sublist in l for item in sublist]
+def flatten(list_of_lists):
+	return [item for sublist in list_of_lists for item in sublist]
 
 
 def filter_tweet_text(tweet_text):
@@ -552,4 +528,3 @@ class MisinfoPredictBatchCollator:
 	def pad_and_apply(self, id_list, id_tensor, ex_idx):
 		ex_ids = id_list[:self.max_seq_len]
 		id_tensor[ex_idx, :len(ex_ids)] = torch.tensor(ex_ids, dtype=torch.long)
-

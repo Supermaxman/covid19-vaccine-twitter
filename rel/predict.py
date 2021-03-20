@@ -1,8 +1,10 @@
 
-import os
-import json
 import argparse
 import logging
+
+# pytorch_lightning can cause issues if
+# torch or other torch libraries are imported first
+# noinspection PyUnresolvedReferences
 import pytorch_lightning as pl
 from transformers import BertTokenizerFast
 from torch.utils.data import DataLoader
@@ -169,5 +171,3 @@ if __name__ == '__main__':
 		trainer.test(model, val_entity_data_loader)
 	except Exception as e:
 		logging.exception('Exception during predicting', exc_info=e)
-
-

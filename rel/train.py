@@ -1,8 +1,10 @@
 
-import os
-import json
 import argparse
 import logging
+
+# pytorch_lightning can cause issues if
+# torch or other torch libraries are imported first
+# noinspection PyUnresolvedReferences
 import pytorch_lightning as pl
 from transformers import BertTokenizerFast
 from torch.utils.data import DataLoader
