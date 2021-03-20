@@ -312,7 +312,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			name
 		)
 
-		m_thresholds = metric_utils.find_m_thresholds_ex(
+		m_thresholds = metric_utils.find_m_thresholds(
 			self.emb_model,
 			dev_entities,
 			dev_relations,
