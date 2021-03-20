@@ -99,6 +99,69 @@ def find_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_
 	return m_thresholds
 
 
+def find_m_thresholds_ex(emb_model, entities, relations, m_examples, m_entities, t_labels):
+	m_energies = defaultdict(list)
+	m_labels = defaultdict(list)
+	for t_id, t_emb in entities.items():
+		for m_id, m_emb in relations.items():
+			pos_t_ids = m_examples[m_id]
+			m_label = 1 if m_id in t_labels[t_id] else 0
+			p_e_embs = []
+			for pos_t_id in pos_t_ids:
+				if pos_t_id != t_id:
+					p_e_emb = m_entities[pos_t_id]
+					p_e_embs.append(p_e_emb)
+			if len(p_e_embs) > 0:
+				p_e_embs = torch.stack(p_e_embs, dim=0).mean(dim=0)
+				p_e = emb_model.energy(
+					head=t_emb,
+					rel=m_emb,
+					tail=p_e_embs
+				)
+			else:
+				p_e = None
+			m_energies[m_id].append(p_e)
+			m_labels[m_id].append(m_label)
+	m_f_energies = {}
+	m_f_labels = {}
+	for m_id in m_energies:
+		if m_energies[m_id] is not None:
+			m_f_energies[m_id] = torch.tensor(m_energies[m_id], dtype=torch.float)
+		else:
+			m_f_energies[m_id] = None
+		m_f_labels[m_id] = torch.tensor(m_labels[m_id], dtype=torch.long)
+
+	m_thresholds = {}
+	avg_threshold = 0.0
+	t_count = 0.0
+	for m_id, m_es in m_f_energies.items():
+		if m_es is None:
+			m_thresholds[m_id] = None
+			continue
+		scores = -m_es
+		min_score = torch.min(scores).item()
+		max_score = torch.max(scores).item()
+		threshold_range = np.round(np.linspace(
+			min_score,
+			max_score,
+			num=100
+		), 4)
+		f1, p, r, threshold = compute_threshold_f1(
+			scores,
+			m_f_labels[m_id],
+			threshold_range=threshold_range,
+		)
+		avg_threshold += threshold
+		t_count += 1.0
+		m_thresholds[m_id] = threshold
+	avg_threshold = avg_threshold / t_count
+	for m_id, m_t in list(m_thresholds.items()):
+		if m_t is None:
+			m_thresholds[m_id] = avg_threshold
+
+	return m_thresholds
+
+
 def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_labels, m_thresholds):
 	scores = []
 	labels = []

@@ -261,7 +261,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		# due to test val step causing missing entities at train start
 		if len(dev_entities) < 100:
 			return
-		m_thresholds = metric_utils.find_m_thresholds(
+		m_thresholds = metric_utils.find_m_thresholds_ex(
 			self.emb_model,
 			dev_entities,
 			dev_relations,
