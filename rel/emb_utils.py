@@ -184,9 +184,12 @@ class RotatEEmbedding(nn.Module):
 		return h_r_t_energy
 
 	def loss(self, pos_energy, neg_energy):
-		pos_loss = -torch.log(torch.sigmoid(self.gamma - pos_energy) + 1e-6)
-		neg_loss = -torch.log(torch.sigmoid(neg_energy - self.gamma) + 1e-6)
-		loss = pos_loss + neg_loss
+		# # pos_loss = -torch.log(torch.sigmoid(self.gamma - pos_energy) + 1e-6)
+		# # neg_loss = -torch.log(torch.sigmoid(neg_energy - self.gamma) + 1e-6)
+		# # loss = pos_loss + neg_loss
+		# accuracy = (pos_energy.lt(neg_energy)).float().mean()
+		margin = pos_energy - neg_energy
+		loss = torch.clamp(self.gamma + margin, min=0.0)
 		accuracy = (pos_energy.lt(neg_energy)).float().mean()
 		return loss, accuracy
 
