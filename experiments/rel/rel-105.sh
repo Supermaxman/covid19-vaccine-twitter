@@ -35,10 +35,10 @@ export TOKENIZERS_PARALLELISM=true
 
 echo "Starting experiment ${RUN_NAME}_${RUN_ID}"
 echo "Reserving ${MISINFO_NUM_GPUS} GPU(s)..."
-MISINFO_GPUS=`python gpu/request_gpus.py -r ${MISINFO_NUM_GPUS}`
+MISINFO_GPUS=$(python gpu/request_gpus.py -r ${MISINFO_NUM_GPUS})
 if [[ ${MISINFO_GPUS} -eq -1 ]]; then
     echo "Unable to reserve ${MISINFO_NUM_GPUS} GPU(s), exiting."
-    exit -1
+    exit 1
 fi
 echo "Reserved ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
 MISINFO_TRAIN_GPUS=${MISINFO_GPUS}
@@ -53,7 +53,7 @@ handler()
     echo "Experiment aborted."
     echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
     python gpu/free_gpus.py -i ${MISINFO_GPUS}
-    exit -1
+    exit 1
 }
 trap handler SIGINT
 
