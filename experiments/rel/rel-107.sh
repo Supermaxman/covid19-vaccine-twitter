@@ -11,7 +11,7 @@ DATASET=v1
 # major hyper-parameters for system
 MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
 
-MISINFO_BATCH_SIZE=6
+MISINFO_BATCH_SIZE=4
 MISINFO_MAX_SEQ_LEN=96
 MISINFO_EMB_SIZE=8
 MISINFO_EMB_MODEL=transms
