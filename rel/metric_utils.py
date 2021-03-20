@@ -125,7 +125,7 @@ def find_m_thresholds_ex(emb_model, entities, relations, m_examples, m_entities,
 	m_f_energies = {}
 	m_f_labels = {}
 	for m_id in m_energies:
-		if m_energies[m_id] is not None:
+		if len(m_energies[m_id]) > 1:
 			m_f_energies[m_id] = torch.tensor(m_energies[m_id], dtype=torch.float)
 		else:
 			m_f_energies[m_id] = None
