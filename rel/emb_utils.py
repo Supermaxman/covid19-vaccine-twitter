@@ -297,14 +297,19 @@ class TuckEREmbedding(nn.Module):
 		w = (w * rel).sum(dim=-1)
 		# [...]
 		w = (w * tail).sum(dim=-1)
-		# this is treated as a score by TuckER
+		# this is treated as a score by TuckER, so - makes energy
 		h_r_t_energy = -w
 		return h_r_t_energy
 
 	def loss(self, pos_energy, neg_energy):
 
-		pos_loss = -torch.log(torch.sigmoid(-pos_energy) + 1e-6)
-		neg_loss = -torch.log(1.0 - torch.sigmoid(-neg_energy) + 1e-6)
-		loss = pos_loss + neg_loss
+		# pos_loss = -torch.log(torch.sigmoid(-pos_energy) + 1e-6)
+		# neg_loss = -torch.log(1.0 - torch.sigmoid(-neg_energy) + 1e-6)
+		# loss = pos_loss + neg_loss
+		# accuracy = (pos_energy.lt(neg_energy)).float().mean()
+		# return loss, accuracy
+
+		margin = pos_energy - neg_energy
+		loss = torch.clamp(self.gamma + margin, min=0.0)
 		accuracy = (pos_energy.lt(neg_energy)).float().mean()
 		return loss, accuracy
