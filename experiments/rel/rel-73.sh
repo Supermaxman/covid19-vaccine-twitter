@@ -28,7 +28,7 @@ MISINFO_EVAL_BATCH_SIZE=8
 
 MISINFO_NUM_GPUS=1
 MISINFO_TRAIN=false
-MISINFO_PREDICT=false
+MISINFO_PREDICT=true
 MISINFO_EVAL=true
 
 export TOKENIZERS_PARALLELISM=true
@@ -80,7 +80,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
 fi
 
 if [[ ${MISINFO_PREDICT} = true ]]; then
-    echo "Running dev misinfo..."
+    echo "Predicting dev misinfo..."
     python rel/predict.py \
       --emb_size ${MISINFO_EMB_SIZE} \
       --emb_model ${MISINFO_EMB_MODEL} \
@@ -90,6 +90,20 @@ if [[ ${MISINFO_PREDICT} = true ]]; then
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
       --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
+      --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
+      --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
+      --gpus ${MISINFO_EVAL_GPUS}
+
+    echo "Predicting test misinfo..."
+    python rel/predict.py \
+      --emb_size ${MISINFO_EMB_SIZE} \
+      --emb_model ${MISINFO_EMB_MODEL} \
+      --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
+      --misinfo_path ${DATASET_PATH}/misinfo.json \
+      --val_path ${DATASET_PATH}/test.jsonl \
+      --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
+      --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
+      --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_TEST \
       --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
       --eval_batch_size ${MISINFO_EVAL_BATCH_SIZE} \
       --gpus ${MISINFO_EVAL_GPUS}
