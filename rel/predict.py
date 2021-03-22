@@ -167,7 +167,6 @@ if __name__ == '__main__':
 
 	logging.info('Predicting...')
 	try:
-		trainer.test(model, val_rel_data_loader)
-		trainer.test(model, val_entity_data_loader)
+		trainer.test(model, test_dataloaders=[val_rel_data_loader, val_entity_data_loader])
 	except Exception as e:
 		logging.exception('Exception during predicting', exc_info=e)

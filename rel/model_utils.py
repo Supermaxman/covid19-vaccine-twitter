@@ -191,13 +191,16 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		}
 		return result
 
-	def test_step(self, batch, batch_nb, dataloader_idx):
+	def test_step(self, *args):
+		batch = args[0]
 		return self._predict_step(batch, 'test')
 
-	def validation_step(self, batch, batch_nb, dataloader_idx):
+	def validation_step(self, *args):
+		batch = args[0]
 		if self.predict_mode:
 			return self._predict_step(batch, 'val')
 		else:
+			dataloader_idx = args[-1]
 			if dataloader_idx == 0:
 				return self._triplet_eval_step(batch, 'val')
 			else:
@@ -355,20 +358,21 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			self._predict_epoch_end(outputs, 'test')
 
 	def _predict_epoch_end(self, outputs, name):
-		embs = torch.cat([x[f'{name}_b_embs'] for x in outputs], dim=0)
-		e_ids = [e_id for x in outputs for e_id in x[f'{name}_ids']]
-		e_type = outputs[0][f'{name}_e_type']
+		for output in outputs:
+			embs = torch.cat([x[f'{name}_b_embs'] for x in output], dim=0)
+			e_ids = [e_id for x in output for e_id in x[f'{name}_ids']]
+			e_type = output[0][f'{name}_e_type']
 
-		device_id = get_device_id()
-		e_path = os.path.join(self.predict_path, f'{e_type}-{device_id}-embeddings.pt')
-		torch.save(
-			{
-				'ids': e_ids,
-				'e_type': e_type,
-				'embs': embs
-			},
-			e_path
-		)
+			device_id = get_device_id()
+			e_path = os.path.join(self.predict_path, f'{e_type}-{device_id}-embeddings.pt')
+			torch.save(
+				{
+					'ids': e_ids,
+					'e_type': e_type,
+					'embs': embs
+				},
+				e_path
+			)
 
 	def configure_optimizers(self):
 		params = self._get_optimizer_params(self.weight_decay)
