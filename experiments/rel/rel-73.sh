@@ -102,6 +102,7 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       --emb_model ${MISINFO_EMB_MODEL} \
       --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
       --misinfo_path ${DATASET_PATH}/misinfo.json \
+      --train_path ${DATASET_PATH}/train.jsonl \
       --val_path ${DATASET_PATH}/dev.jsonl \
       --test_path ${DATASET_PATH}/test.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \

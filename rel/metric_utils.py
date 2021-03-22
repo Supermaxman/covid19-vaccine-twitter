@@ -102,6 +102,7 @@ def find_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_
 def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_labels, m_thresholds):
 	scores = []
 	labels = []
+	misinfo = []
 	for t_id, t_emb in entities.items():
 		for m_id, m_emb in relations.items():
 			pos_t_ids = m_examples[m_id]
@@ -119,6 +120,7 @@ def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities
 			p_s = (-p_e).gt(m_thresholds[m_id]).float()
 			scores.append(p_s)
 			labels.append(m_label)
+			misinfo.append(m_id)
 	scores = torch.tensor(scores, dtype=torch.float)
 	labels = torch.tensor(labels, dtype=torch.long)
 
@@ -129,6 +131,7 @@ def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities
 		max_score,
 		num=100
 	), 4)
+	# TODO compute f1 for each misinfo target
 	f1, p, r, threshold = compute_threshold_f1(
 		scores,
 		labels,

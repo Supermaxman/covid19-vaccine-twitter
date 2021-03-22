@@ -299,8 +299,13 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		return entities, relations, m_examples, t_labels
 
 	def _test_epoch_end(self, outputs, name):
-		val_entity_outputs, val_rel_outputs, test_entity_outputs, test_rel_outputs = outputs
+		train_entity_outputs, train_rel_outputs, val_entity_outputs, val_rel_outputs, test_entity_outputs, test_rel_outputs = outputs
 
+		train_entities, _, train_m_examples, _ = self._extract_embeddings(
+			train_entity_outputs,
+			train_rel_outputs,
+			name
+		)
 		dev_entities, dev_relations, dev_m_examples, dev_t_labels = self._extract_embeddings(
 			val_entity_outputs,
 			val_rel_outputs,
@@ -316,11 +321,11 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			self.emb_model,
 			dev_entities,
 			dev_relations,
-			dev_m_examples,
-			dev_entities,
+			train_m_examples,
+			train_entities,
 			dev_t_labels
 		)
-
+		# TODO get performance per misinfo target
 		f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
 			self.emb_model,
 			test_entities,
