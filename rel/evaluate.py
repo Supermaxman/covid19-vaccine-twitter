@@ -18,7 +18,6 @@ import torch
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-trp', '--train_path', required=True)
 	parser.add_argument('-vp', '--val_path', required=True)
 	parser.add_argument('-tp', '--test_path', required=True)
 	parser.add_argument('-pm', '--pre_model_name', default='nboost/pt-biobert-base-msmarco')
@@ -71,8 +70,6 @@ if __name__ == '__main__':
 
 	logging.info(f'Loading tokenizer: {args.pre_model_name}')
 	tokenizer = BertTokenizerFast.from_pretrained(args.pre_model_name)
-	logging.info(f'Loading train dataset: {args.train_path}')
-	train_data = read_jsonl(args.train_path)
 	logging.info(f'Loading val dataset: {args.val_path}')
 	val_data = read_jsonl(args.val_path)
 	logging.info(f'Loading test dataset: {args.test_path}')
@@ -85,36 +82,6 @@ if __name__ == '__main__':
 		logging.info(f'Loaded misconception info.')
 
 	logging.info('Loading datasets...')
-	train_entity_dataset = MisinfoEntityDataset(
-		documents=train_data,
-		tokenizer=tokenizer,
-		misinfo=misinfo
-	)
-	train_rel_dataset = MisinfoRelDataset(
-		misinfo=misinfo,
-		tokenizer=tokenizer,
-		m_examples=train_entity_dataset.m_examples
-	)
-	train_entity_data_loader = DataLoader(
-		train_entity_dataset,
-		num_workers=num_workers,
-		batch_size=args.eval_batch_size,
-		shuffle=False,
-		collate_fn=MisinfoPredictBatchCollator(
-			args.max_seq_len,
-			force_max_seq_len=args.use_tpus,
-		)
-	)
-	train_rel_data_loader = DataLoader(
-		train_rel_dataset,
-		num_workers=num_workers,
-		batch_size=args.eval_batch_size,
-		shuffle=False,
-		collate_fn=MisinfoPredictBatchCollator(
-			args.max_seq_len,
-			force_max_seq_len=args.use_tpus,
-		)
-	)
 	val_entity_dataset = MisinfoEntityDataset(
 		documents=val_data,
 		tokenizer=tokenizer,
@@ -175,9 +142,6 @@ if __name__ == '__main__':
 			force_max_seq_len=args.use_tpus,
 		)
 	)
-
-	logging.info(f'train_entities={len(train_entity_dataset)}')
-	logging.info(f'train_rels={len(train_rel_dataset)}')
 
 	logging.info(f'val_entities={len(val_entity_dataset)}')
 	logging.info(f'val_rels={len(val_rel_dataset)}')
@@ -241,8 +205,6 @@ if __name__ == '__main__':
 		results = trainer.test(
 			model,
 			test_dataloaders=[
-				train_entity_data_loader,
-				train_rel_data_loader,
 				val_entity_data_loader,
 				val_rel_data_loader,
 				test_entity_data_loader,
