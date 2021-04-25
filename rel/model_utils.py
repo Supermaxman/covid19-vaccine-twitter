@@ -14,6 +14,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 	def __init__(
 			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, emb_model, emb_size, emb_loss_norm,
 			gamma,
+			eval_mode='centroid',
 			threshold=None,
 			torch_cache_dir=None, predict_mode=False, predict_path=None, load_pretrained=False
 	):
@@ -27,6 +28,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		self.threshold = threshold
 		self.predict_mode = predict_mode
 		self.predict_path = predict_path
+		self.eval_mode = eval_mode.lower()
 		if self.predict_mode:
 			if not os.path.exists(self.predict_path):
 				os.mkdir(self.predict_path)
@@ -315,30 +317,69 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			name
 		)
 
-		m_thresholds = metric_utils.find_m_thresholds(
-			self.emb_model,
-			dev_entities,
-			dev_relations,
-			dev_m_examples,
-			dev_entities,
-			dev_t_labels
-		)
 		# TODO get misinfo level stats
-		f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
-			self.emb_model,
-			test_entities,
-			test_relations,
-			dev_m_examples,
-			dev_entities,
-			test_t_labels,
-			m_thresholds
-		)
-		results = {
-			'f1': f1,
-			'p': p,
-			'r': r,
-			'm_thresholds': m_thresholds
-		}
+		if self.eval_mode == 'centroid':
+			m_thresholds = metric_utils.find_m_thresholds(
+				self.emb_model,
+				dev_entities,
+				dev_relations,
+				dev_m_examples,
+				dev_entities,
+				dev_t_labels
+			)
+			f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
+				self.emb_model,
+				test_entities,
+				test_relations,
+				dev_m_examples,
+				dev_entities,
+				test_t_labels,
+				m_thresholds
+			)
+			results = {
+				'f1': f1,
+				'p': p,
+				'r': r,
+				'm_thresholds': m_thresholds
+			}
+		elif self.eval_mode == 'all':
+			mr_thresholds = metric_utils.find_mr_thresholds(
+				self.emb_model,
+				dev_entities,
+				dev_relations,
+				dev_m_examples,
+				dev_entities,
+				dev_t_labels
+			)
+			mc_thresholds = metric_utils.find_mc_thresholds(
+				self.emb_model,
+				dev_entities,
+				dev_relations,
+				dev_m_examples,
+				dev_entities,
+				dev_t_labels,
+				mr_thresholds
+			)
+
+			f1, p, r, threshold = metric_utils.evaluate_mc_thresholds(
+				self.emb_model,
+				test_entities,
+				test_relations,
+				dev_m_examples,
+				dev_entities,
+				test_t_labels,
+				mr_thresholds,
+				mc_thresholds
+			)
+			results = {
+				'f1': f1,
+				'p': p,
+				'r': r,
+				'mr_thresholds': mr_thresholds,
+				'mc_thresholds': mc_thresholds,
+			}
+		else:
+			raise ValueError(f'Unknown eval mode: {self.eval_mode}')
 
 		self.log(f'{name}_f1', f1)
 		self.log(f'{name}_p', p)
