@@ -22,7 +22,7 @@ def compute_f1(logits, labels, threshold):
 	i_precision = i_tp / (torch.clamp(i_tp + i_fp, 1.0))
 	i_recall = i_tp / torch.clamp(i_tp + i_fn, 1.0)
 
-	i_f1 = 2.0 * (i_precision * i_recall) / (torch.clamp(i_precision + i_recall, 1.0))
+	i_f1 = 2.0 * (i_precision * i_recall) / (torch.clamp(i_precision + i_recall, 0.0001))
 	return i_f1, i_precision, i_recall, predictions
 
 

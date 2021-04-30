@@ -14,7 +14,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 	def __init__(
 			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, emb_model, emb_size, emb_loss_norm,
 			gamma,
-			eval_mode='centroid',
+			eval_mode='centroid', eval_noise=None,
 			threshold=None,
 			torch_cache_dir=None, predict_mode=False, predict_path=None, load_pretrained=False
 	):
@@ -29,6 +29,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		self.predict_mode = predict_mode
 		self.predict_path = predict_path
 		self.eval_mode = eval_mode.lower()
+		self.eval_noise = eval_noise
 		if self.predict_mode:
 			if not os.path.exists(self.predict_path):
 				os.mkdir(self.predict_path)
@@ -223,6 +224,9 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		# [bsize, hidden_size]
 		lm_output = contextualized_embeddings[:, 0]
 		b_embs = self.emb_model(lm_output, e_type)
+
+		if self.eval_noise is not None and self.eval_noise > 0:
+			b_embs = torch.randn_like(b_embs) * self.eval_noise
 
 		results = {
 			f'{name}_e_type': e_type,
