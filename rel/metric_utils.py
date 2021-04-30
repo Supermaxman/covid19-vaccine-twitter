@@ -23,7 +23,7 @@ def compute_f1(logits, labels, threshold):
 	i_recall = i_tp / torch.clamp(i_tp + i_fn, 1.0)
 
 	i_f1 = 2.0 * (i_precision * i_recall) / (torch.clamp(i_precision + i_recall, 1.0))
-	return i_f1, i_precision, i_recall
+	return i_f1, i_precision, i_recall, predictions
 
 
 def compute_threshold_f1(
@@ -46,10 +46,10 @@ def compute_threshold_f1(
 	max_f1 = float('-inf')
 	max_vals = None
 	for threshold in threshold_range:
-		f1, p, r = compute_f1(scores, labels, threshold)
+		f1, p, r, preds = compute_f1(scores, labels, threshold)
 		if f1 > max_f1:
 			max_f1 = f1
-			max_vals = f1, p, r, threshold
+			max_vals = f1, p, r, threshold, preds
 
 	return max_vals
 
@@ -89,7 +89,7 @@ def find_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_
 			max_score,
 			num=100
 		), 4)
-		f1, p, r, threshold = compute_threshold_f1(
+		f1, p, r, threshold, m_preds = compute_threshold_f1(
 			scores,
 			m_f_labels[m_id],
 			threshold_range=threshold_range,
@@ -134,7 +134,7 @@ def find_mr_thresholds(emb_model, entities, relations, m_examples, m_entities, t
 			max_score,
 			num=100
 		), 4)
-		f1, p, r, threshold = compute_threshold_f1(
+		f1, p, r, threshold, m_preds = compute_threshold_f1(
 			scores,
 			m_f_labels[m_id],
 			threshold_range=threshold_range,
@@ -180,7 +180,7 @@ def find_mc_thresholds(emb_model, entities, relations, m_examples, m_entities, t
 			max_score,
 			num=100
 		), 4)
-		f1, p, r, threshold = compute_threshold_f1(
+		f1, p, r, threshold, m_preds = compute_threshold_f1(
 			scores,
 			m_f_labels[m_id],
 			threshold_range=threshold_range,
@@ -223,12 +223,12 @@ def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities
 		num=100
 	), 4)
 	# TODO compute f1 for each misinfo target
-	f1, p, r, threshold = compute_threshold_f1(
+	f1, p, r, threshold, preds = compute_threshold_f1(
 		scores,
 		labels,
 		threshold_range=threshold_range,
 	)
-	return f1, p, r, threshold
+	return f1, p, r, threshold, preds
 
 
 def evaluate_mc_thresholds(emb_model, entities, relations, m_examples, m_entities, t_labels, mr_thresholds, mc_thresholds):
@@ -264,9 +264,9 @@ def evaluate_mc_thresholds(emb_model, entities, relations, m_examples, m_entitie
 		num=100
 	), 4)
 	# TODO compute f1 for each misinfo target
-	f1, p, r, threshold = compute_threshold_f1(
+	f1, p, r, threshold, preds = compute_threshold_f1(
 		scores,
 		labels,
 		threshold_range=threshold_range,
 	)
-	return f1, p, r, threshold
+	return f1, p, r, threshold, preds
