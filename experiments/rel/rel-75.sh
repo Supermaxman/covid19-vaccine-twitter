@@ -30,7 +30,8 @@ MISINFO_NUM_GPUS=1
 MISINFO_TRAIN=false
 MISINFO_PREDICT=false
 MISINFO_EVAL=true
-MISINFO_EVAL_MODE=all
+MISINFO_EVAL_MODE=centroid
+MISINFO_EVAL_NOISE=0.1
 
 export TOKENIZERS_PARALLELISM=true
 
@@ -103,6 +104,7 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       --emb_model ${MISINFO_EMB_MODEL} \
       --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
       --eval_mode ${MISINFO_EVAL_MODE} \
+      --eval_noise ${MISINFO_EVAL_NOISE} \
       --misinfo_path ${DATASET_PATH}/misinfo.json \
       --val_path ${DATASET_PATH}/dev.jsonl \
       --test_path ${DATASET_PATH}/test.jsonl \
