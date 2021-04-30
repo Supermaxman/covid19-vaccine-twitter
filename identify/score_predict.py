@@ -14,13 +14,8 @@ def create_dataset(tweets, misinfo, tweet_scores):
 	labels = torch.zeros([len(tweets), len(misinfo)], dtype=torch.long)
 	m_map = {m_id: m_idx for (m_idx, m_id) in enumerate(misinfo.keys())}
 	missing_count = 0
-	tweet_ids = []
-	m_ids = []
-	m_labels = []
-	t_text = {}
 	for t_idx, t in enumerate(tweets):
 		tweet_id = t['id']
-		t_text[tweet_id] = t['full_text']
 		if tweet_id not in tweet_scores:
 			missing_count += 1
 			continue
@@ -36,10 +31,7 @@ def create_dataset(tweets, misinfo, tweet_scores):
 
 			labels[t_idx, m_map[m_id]] = m_label
 			scores[t_idx, m_map[m_id]] = m_score
-			tweet_ids.append(tweet_id)
-			m_ids.append(m_id)
-			m_labels.append(m_label)
-	return labels, scores, missing_count, tweet_ids, m_ids, m_labels, t_text
+	return labels, scores, missing_count, m_map
 
 
 if __name__ == '__main__':
@@ -98,7 +90,7 @@ if __name__ == '__main__':
 	threshold = args.threshold
 	if threshold is None:
 		logging.info(f'Calculating training threshold...')
-		t_labels, t_scores, t_missing, _, _, _, _ = create_dataset(train_data, misinfo, train_scores)
+		t_labels, t_scores, t_missing, _ = create_dataset(train_data, misinfo, train_scores)
 		logging.info(f'Missing training tweet scores: {t_missing}')
 
 		t_f1, t_p, t_r, threshold, _ = compute_threshold_f1(
@@ -111,7 +103,7 @@ if __name__ == '__main__':
 		# print(f'{t_p:.4f}\t{t_r:.4f}\t{t_f1:.4f}\t{threshold}')
 
 	logging.info(f'Predicting on val data...')
-	v_labels, v_scores, v_missing, tweet_ids, m_ids, m_labels, t_text = create_dataset(val_data, misinfo, val_scores)
+	v_labels, v_scores, v_missing, m_map = create_dataset(val_data, misinfo, val_scores)
 	logging.info(f'Missing val tweet scores: {v_missing}')
 	f1, p, r, _, m_preds = compute_threshold_f1(
 		scores=v_scores,
@@ -121,15 +113,21 @@ if __name__ == '__main__':
 	print(f'P\tR\tF1\tT')
 	print(f'{p:.4f}\t{r:.4f}\t{f1:.4f}\t{threshold}')
 	rows = []
-	for tweet_id, m_id, m_pred, m_label in zip(tweet_ids, m_ids, m_preds, m_labels):
-		row = {
-			'tweet_id': tweet_id,
-			'text': t_text,
-			'm_id': m_id,
-			'm_text': misinfo[m_id]['text'],
-			'm_label': m_label,
-			'm_pred': m_pred
-		}
-		rows.append(row)
+	for t_idx, tweet in enumerate(val_data):
+		tweet_id = tweet['id']
+		t_text = tweet['full_text']
+		for m_id, m in misinfo.items():
+			m_text = m['text']
+			m_label = v_labels[t_idx, m_map[m_id]].item()
+			m_pred = m_preds[t_idx, m_map[m_id]].item()
+			row = {
+				'tweet_id': tweet_id,
+				'text': t_text,
+				'm_id': m_id,
+				'm_text': m_text,
+				'm_label': m_label,
+				'm_pred': m_pred
+			}
+			rows.append(row)
 
 	write_jsonl(rows, pred_path)
