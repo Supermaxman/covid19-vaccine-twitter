@@ -226,7 +226,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		b_embs = self.emb_model(lm_output, e_type)
 
 		if self.eval_noise is not None and self.eval_noise > 0:
-			b_embs = torch.randn_like(b_embs) * self.eval_noise
+			b_embs = b_embs + (torch.randn_like(b_embs) * self.eval_noise)
 
 		results = {
 			f'{name}_e_type': e_type,
