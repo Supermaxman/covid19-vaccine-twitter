@@ -193,7 +193,8 @@ def find_mc_thresholds(emb_model, entities, relations, m_examples, m_entities, t
 def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_labels, m_thresholds):
 	scores = []
 	labels = []
-	misinfo = []
+	m_ids = []
+	tweet_ids = []
 	for t_id, t_emb in entities.items():
 		for m_id, m_emb in relations.items():
 			pos_t_ids = m_examples[m_id]
@@ -211,7 +212,8 @@ def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities
 			p_s = (-p_e).gt(m_thresholds[m_id]).float()
 			scores.append(p_s)
 			labels.append(m_label)
-			misinfo.append(m_id)
+			m_ids.append(m_id)
+			tweet_ids.append(t_id)
 	scores = torch.tensor(scores, dtype=torch.float)
 	labels = torch.tensor(labels, dtype=torch.long)
 
@@ -228,7 +230,7 @@ def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities
 		labels,
 		threshold_range=threshold_range,
 	)
-	return f1, p, r, threshold, preds
+	return f1, p, r, threshold, scores, preds, labels, tweet_ids, m_ids
 
 
 def evaluate_mc_thresholds(emb_model, entities, relations, m_examples, m_entities, t_labels, mr_thresholds, mc_thresholds):

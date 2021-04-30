@@ -275,7 +275,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			dev_t_labels
 		)
 
-		f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
+		f1, p, r, threshold, _ = metric_utils.evaluate_m_thresholds(
 			self.emb_model,
 			dev_entities,
 			dev_relations,
@@ -327,7 +327,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				dev_entities,
 				dev_t_labels
 			)
-			f1, p, r, threshold = metric_utils.evaluate_m_thresholds(
+			f1, p, r, threshold, scores, preds, labels, tweet_ids, m_ids = metric_utils.evaluate_m_thresholds(
 				self.emb_model,
 				test_entities,
 				test_relations,
@@ -336,11 +336,21 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				test_t_labels,
 				m_thresholds
 			)
+			pred_list = []
+			for tweet_id, m_id, m_label, m_pred in zip(tweet_ids, m_ids, labels, preds):
+				row = {
+					'tweet_id': tweet_id,
+					'm_id': m_id,
+					'm_label': m_label.item(),
+					'm_pred': m_pred.item()
+				}
+				pred_list.append(row)
 			results = {
 				'f1': f1,
 				'p': p,
 				'r': r,
-				'm_thresholds': m_thresholds
+				'm_thresholds': m_thresholds,
+				'preds': pred_list
 			}
 		elif self.eval_mode == 'all':
 			mr_thresholds = metric_utils.find_mr_thresholds(
@@ -361,7 +371,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				mr_thresholds
 			)
 
-			f1, p, r, threshold = metric_utils.evaluate_mc_thresholds(
+			f1, p, r, threshold, preds = metric_utils.evaluate_mc_thresholds(
 				self.emb_model,
 				test_entities,
 				test_relations,

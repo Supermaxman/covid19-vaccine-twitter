@@ -50,6 +50,7 @@ python identify/score_predict.py \
   --train_path ${DATASET_PATH}/train.jsonl \
   --val_path ${DATASET_PATH}/test.jsonl \
   --misinfo_path ${DATASET_PATH}/misinfo.json \
+  --threshold_max 10.0 \
   --model_name bm25-scores \
   --train_score_path ${DATASET_PATH}/train-bm25-scores.json \
   --val_score_path ${DATASET_PATH}/test-bm25-scores.json
