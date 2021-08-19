@@ -21,8 +21,12 @@ def compute_f1(logits, labels, threshold):
 	i_fn = (predictions.ne(1).float() * labels.eq(1).float()).sum()
 	i_precision = i_tp / (i_tp + i_fp)
 	i_recall = i_tp / (i_tp + i_fn)
-
+	print(i_precision)
+	print(i_recall)
 	i_f1 = (2.0 * i_precision * i_recall) / (i_precision + i_recall)
+	print(2.0 * i_precision * i_recall)
+	print(i_precision + i_recall)
+	print(i_f1)
 	return i_f1, i_precision, i_recall, predictions
 
 
