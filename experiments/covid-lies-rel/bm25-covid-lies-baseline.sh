@@ -22,6 +22,7 @@ export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.7.10-0.fc30.x86_64/
 #    -storeDocvectors \
 #    -storeRaw
 
+SPLIT_FILES=""
 for (( SPLIT=1; SPLIT<=${NUM_SPLITS}; SPLIT++ )) do
   echo "Training split ${SPLIT} model..."
   MODEL_NAME=bm25-covid-lies-scores-s${SPLIT}
@@ -60,4 +61,8 @@ for (( SPLIT=1; SPLIT<=${NUM_SPLITS}; SPLIT++ )) do
     --model_name ${MODEL_NAME} \
     --train_score_path ${DATASET_PATH}/train_s"${SPLIT}"-bm25-scores.json \
     --val_score_path ${DATASET_PATH}/test_s"${SPLIT}"-bm25-scores.json
+    SPLIT_FILES="${SPLIT_FILES},${DATASET_PATH}/test_s${SPLIT}-bm25-scores.json"
 done
+
+python identify/multi_split_eval.py \
+  --input_path ${SPLIT_FILES}
