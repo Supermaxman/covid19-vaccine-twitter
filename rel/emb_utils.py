@@ -130,6 +130,32 @@ class TransEEmbedding(nn.Module):
 		return loss, accuracy
 
 
+class KNNEmbedding(nn.Module):
+	def __init__(self, gamma, loss_norm):
+		super().__init__()
+		self.gamma = gamma
+		self.loss_norm = loss_norm
+
+	def forward(self, source_embeddings, emb_type):
+		return source_embeddings
+
+	def energy(self, head, rel, tail):
+		h_r_t_diff = head - tail
+		if self.loss_norm == 1:
+			h_r_t_energy = torch.norm(h_r_t_diff, p=1, dim=-1, keepdim=False)
+		elif self.loss_norm == 2:
+			h_r_t_energy = (h_r_t_diff * h_r_t_diff).sum(dim=-1)
+		else:
+			raise ValueError(f'Unknown loss norm: {self.loss_norm}')
+		return h_r_t_energy
+
+	def loss(self, pos_energy, neg_energy):
+		margin = pos_energy - neg_energy
+		loss = torch.clamp(self.gamma + margin, min=0.0)
+		accuracy = (pos_energy.lt(neg_energy)).float().mean()
+		return loss, accuracy
+
+
 class RotatEEmbedding(nn.Module):
 	def __init__(self, hidden_size, emb_size, gamma, loss_norm=2):
 		super().__init__()

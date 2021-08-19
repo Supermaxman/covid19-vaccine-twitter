@@ -32,6 +32,7 @@ if __name__ == '__main__':
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
 	parser.add_argument('-eln', '--emb_loss_norm', default=2, type=int)
 	parser.add_argument('-em', '--emb_model', default='transd')
+	parser.add_argument('-mt', '--model_type', default='bert')
 
 	args = parser.parse_args()
 
@@ -120,6 +121,7 @@ if __name__ == '__main__':
 		updates_total=0,
 		weight_decay=0,
 		emb_model=args.emb_model,
+		model_type=args.model_type,
 		emb_size=args.emb_size,
 		emb_loss_norm=args.emb_loss_norm,
 		gamma=0.0,

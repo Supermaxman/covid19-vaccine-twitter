@@ -32,6 +32,7 @@ if __name__ == '__main__':
 	parser.add_argument('-es', '--emb_size', default=100, type=int)
 	parser.add_argument('-eln', '--emb_loss_norm', default=2, type=int)
 	parser.add_argument('-em', '--emb_model', default='transd')
+	parser.add_argument('-mt', '--model_type', default='bert')
 	parser.add_argument('-evm', '--eval_mode', default='centroid')
 	parser.add_argument('-evn', '--eval_noise', default=None, type=float)
 
@@ -160,6 +161,7 @@ if __name__ == '__main__':
 		weight_decay=0,
 		emb_model=args.emb_model,
 		emb_size=args.emb_size,
+		model_type=args.model_type,
 		emb_loss_norm=args.emb_loss_norm,
 		eval_mode=args.eval_mode,
 		eval_noise=args.eval_noise,

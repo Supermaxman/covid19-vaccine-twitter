@@ -15,7 +15,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, emb_model, emb_size, emb_loss_norm,
 			gamma,
 			eval_mode='centroid', eval_noise=None,
-			threshold=None,
+			threshold=None, model_type='bert',
 			torch_cache_dir=None, predict_mode=False, predict_path=None, load_pretrained=False
 	):
 		super().__init__()
@@ -30,6 +30,8 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		self.predict_path = predict_path
 		self.eval_mode = eval_mode.lower()
 		self.eval_noise = eval_noise
+		self.model_type = model_type
+
 		if self.predict_mode:
 			if not os.path.exists(self.predict_path):
 				os.mkdir(self.predict_path)
@@ -42,13 +44,27 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				pre_model_name,
 				cache_dir=torch_cache_dir
 			)
-			self.bert = BertModel(self.config)
+			if model_type == 'bert':
+				self.bert = BertModel(self.config)
+			elif model_type == 'lstm':
+				self.bert = LstmModel(self.config)
+			else:
+				raise ValueError(f'Unknown model type: {model_type}')
 		else:
-			self.bert = BertModel.from_pretrained(
-				pre_model_name,
-				cache_dir=torch_cache_dir
-			)
-			self.config = self.bert.config
+			if model_type == 'bert':
+				self.bert = BertModel.from_pretrained(
+					pre_model_name,
+					cache_dir=torch_cache_dir
+				)
+				self.config = self.bert.config
+			elif model_type == 'lstm':
+				self.config = BertConfig.from_pretrained(
+					pre_model_name,
+					cache_dir=torch_cache_dir
+				)
+				self.bert = LstmModel(self.config)
+			else:
+				raise ValueError(f'Unknown model type: {model_type}')
 
 		self.emb_size = emb_size
 		self.emb_loss_norm = emb_loss_norm
@@ -68,6 +84,11 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			self.emb_model = TransEEmbedding(
 				self.config.hidden_size,
 				self.emb_size,
+				self.gamma,
+				self.emb_loss_norm
+			)
+		elif emb_model == 'knn':
+			self.emb_model = KNNEmbedding(
 				self.gamma,
 				self.emb_loss_norm
 			)
@@ -463,3 +484,30 @@ def get_device_id():
 		else:
 			device_id = 0
 	return device_id
+
+
+class LstmModel(nn.Module):
+	def __init__(self, config, num_layers=1):
+		super().__init__()
+		self.hidden_dim = config.hidden_size
+		self.vocab_size = config.vocab_size
+		self.num_layers = num_layers
+
+		self.word_embeddings = nn.Embedding(self.vocab_size, self.hidden_dim // 2)
+
+		# The LSTM takes word embeddings as inputs, and outputs hidden states
+		# with dimensionality hidden_dim.
+		self.lstm = nn.LSTM(
+			self.hidden_dim // 2,
+			self.hidden_dim // 2,
+			num_layers=num_layers,
+			batch_first=True,
+			bidirectional=True
+		)
+
+	def forward(self, input_ids, attention_mask=None, token_type_ids=None):
+		# [bsize, s_len, emb_size]
+		embeds = self.word_embeddings(input_ids)
+		# [bsize, s_len, self.hidden_dim]
+		lstm_out, lstm_hidden = self.lstm(embeds)
+		return lstm_out, lstm_hidden
