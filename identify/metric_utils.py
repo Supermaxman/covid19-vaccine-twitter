@@ -19,10 +19,10 @@ def compute_f1(logits, labels, threshold):
 	i_fp = (predictions.eq(1).float() * labels.ne(1).float()).sum()
 	# label is positive and predicted negative
 	i_fn = (predictions.ne(1).float() * labels.eq(1).float()).sum()
-	i_precision = i_tp / (i_tp + i_fp)
-	i_recall = i_tp / (i_tp + i_fn)
+	i_precision = i_tp / (torch.clamp(i_tp + i_fp, 1.0))
+	i_recall = i_tp / torch.clamp(i_tp + i_fn, 1.0)
 
-	i_f1 = (2.0 * i_precision * i_recall) / (i_precision + i_recall)
+	i_f1 = 2.0 * (i_precision * i_recall) / (torch.clamp(i_precision + i_recall, 0.0001))
 	return i_f1, i_precision, i_recall, predictions
 
 
