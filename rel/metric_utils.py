@@ -22,7 +22,7 @@ def compute_f1(logits, labels, threshold):
 	i_precision = i_tp / (i_tp + i_fp)
 	i_recall = i_tp / (i_tp + i_fn)
 
-	i_f1 = 2.0 * (i_precision * i_recall) / (i_precision + i_recall)
+	i_f1 = (2.0 * i_precision * i_recall) / (i_precision + i_recall)
 	return i_f1, i_precision, i_recall, predictions
 
 
