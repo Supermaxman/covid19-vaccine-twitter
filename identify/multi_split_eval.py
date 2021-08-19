@@ -44,7 +44,7 @@ if __name__ == '__main__':
 		m_ids.append(p['m_id'])
 		t_ids.append(p['tweet_id'])
 
-	f1, p, r, _, _ = compute_f1(
+	f1, p, r, _ = compute_f1(
 		torch.tensor(model_preds),
 		torch.tensor(labels),
 		threshold=0
