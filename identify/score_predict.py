@@ -110,6 +110,10 @@ if __name__ == '__main__':
 		labels=v_labels,
 		threshold=threshold
 	)
+	print(p)
+	print(r)
+	print(f1)
+	print(threshold)
 	print(f'P\tR\tF1\tT')
 	print(f'{p:.4f}\t{r:.4f}\t{f1:.4f}\t{threshold}')
 	rows = []
