@@ -15,7 +15,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			self, pre_model_name, learning_rate, weight_decay, lr_warmup, updates_total, emb_model, emb_size, emb_loss_norm,
 			gamma,
 			eval_mode='centroid', eval_noise=None,
-			threshold=None, model_type='bert',
+			threshold=None, model_type='bert', model_layers=1,
 			torch_cache_dir=None, predict_mode=False, predict_path=None, load_pretrained=False
 	):
 		super().__init__()
@@ -31,6 +31,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 		self.eval_mode = eval_mode.lower()
 		self.eval_noise = eval_noise
 		self.model_type = model_type
+		self.model_layers = model_layers
 
 		if self.predict_mode:
 			if not os.path.exists(self.predict_path):
@@ -47,7 +48,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			if model_type == 'bert':
 				self.bert = BertModel(self.config)
 			elif model_type == 'lstm':
-				self.bert = LstmModel(self.config)
+				self.bert = LstmModel(self.config, model_layers)
 			else:
 				raise ValueError(f'Unknown model type: {model_type}')
 		else:
@@ -62,7 +63,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 					pre_model_name,
 					cache_dir=torch_cache_dir
 				)
-				self.bert = LstmModel(self.config)
+				self.bert = LstmModel(self.config, model_layers)
 			else:
 				raise ValueError(f'Unknown model type: {model_type}')
 
