@@ -57,11 +57,16 @@ def compute_threshold_f1(
 def find_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_labels):
 	m_energies = defaultdict(list)
 	m_labels = defaultdict(list)
+	m_thresholds = {}
 	for t_id, t_emb in entities.items():
 		for m_id, m_emb in relations.items():
 			pos_t_ids = m_examples[m_id]
 			m_label = 1 if m_id in t_labels[t_id] else 0
 			p_e_embs = []
+			if len(pos_t_ids) == 1 and len(pos_t_ids[0]) == 0:
+				# set threshold so high no classified positives
+				m_thresholds[m_id] = 1e6
+				continue
 			for pos_t_id in pos_t_ids:
 				p_e_emb = m_entities[pos_t_id]
 				p_e_embs.append(p_e_emb)
@@ -79,7 +84,6 @@ def find_m_thresholds(emb_model, entities, relations, m_examples, m_entities, t_
 		m_f_energies[m_id] = torch.tensor(m_energies[m_id], dtype=torch.float)
 		m_f_labels[m_id] = torch.tensor(m_labels[m_id], dtype=torch.long)
 
-	m_thresholds = {}
 	for m_id, m_es in m_f_energies.items():
 		scores = -m_es
 		min_score = torch.min(scores).item()
