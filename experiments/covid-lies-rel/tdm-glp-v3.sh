@@ -8,7 +8,7 @@ RUN_NAME=HLTRI_COVID_MISINFO
 # collection
 DATASET=covid-lies
 DATASET_PATH=data/${DATASET}
-NUM_SPLITS=4
+NUM_SPLITS=5
 
 # major hyper-parameters for system
 MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
