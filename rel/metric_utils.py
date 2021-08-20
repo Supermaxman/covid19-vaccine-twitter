@@ -204,16 +204,20 @@ def evaluate_m_thresholds(emb_model, entities, relations, m_examples, m_entities
 			pos_t_ids = m_examples[m_id]
 			m_label = 1 if m_id in t_labels[t_id] else 0
 			p_e_embs = []
-			for pos_t_id in pos_t_ids:
-				p_e_emb = m_entities[pos_t_id]
-				p_e_embs.append(p_e_emb)
-			p_e_embs = torch.stack(p_e_embs, dim=0).mean(dim=0)
-			p_e = emb_model.energy(
-				head=t_emb,
-				rel=m_emb,
-				tail=p_e_embs
-			)
-			p_s = (-p_e).gt(m_thresholds[m_id]).float()
+			if len(pos_t_ids) == 1 and len(pos_t_ids[0]) == 0:
+				# no positive examples of m_id in dev set
+				p_s = 0.0
+			else:
+				for pos_t_id in pos_t_ids:
+					p_e_emb = m_entities[pos_t_id]
+					p_e_embs.append(p_e_emb)
+				p_e_embs = torch.stack(p_e_embs, dim=0).mean(dim=0)
+				p_e = emb_model.energy(
+					head=t_emb,
+					rel=m_emb,
+					tail=p_e_embs
+				)
+				p_s = (-p_e).gt(m_thresholds[m_id]).float()
 			scores.append(p_s)
 			labels.append(m_label)
 			m_ids.append(m_id)
