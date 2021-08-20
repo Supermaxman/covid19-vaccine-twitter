@@ -93,6 +93,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 				self.gamma,
 				self.emb_loss_norm
 			)
+			self.emb_size = self.config.hidden_size
 		elif emb_model == 'rotate':
 			self.emb_model = RotatEEmbedding(
 				self.config.hidden_size,
