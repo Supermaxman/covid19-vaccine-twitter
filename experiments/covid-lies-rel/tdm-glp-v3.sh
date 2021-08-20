@@ -4,7 +4,7 @@ filename=$(basename -- "$0")
 # run names
 RUN_ID=${filename::-3}
 RUN_NAME=HLTRI_COVID_MISINFO
-
+# RUN_ID=tdm-glp-v7
 # collection
 DATASET=covid-lies
 DATASET_PATH=data/${DATASET}

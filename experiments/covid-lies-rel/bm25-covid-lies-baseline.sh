@@ -27,40 +27,26 @@ for (( SPLIT=1; SPLIT<=${NUM_SPLITS}; SPLIT++ )) do
   echo "Training split ${SPLIT} model..."
   MODEL_NAME=bm25-covid-lies-scores-s${SPLIT}
 
-#  python preprocess/search_misinfo_index.py \
-#      --index_path ${DATASET_PATH}/misinfo-v1 \
-#      --query_path ${DATASET_PATH}/train_s"${SPLIT}".jsonl \
-#      --output_path ${DATASET_PATH}/train_s"${SPLIT}"-bm25-scores.json \
-#      --top_k 1000
-#
-#  python preprocess/search_misinfo_index.py \
-#      --index_path ${DATASET_PATH}/misinfo-v1 \
-#      --query_path ${DATASET_PATH}/dev_s"${SPLIT}".jsonl \
-#      --output_path ${DATASET_PATH}/dev_s"${SPLIT}"-bm25-scores.json \
-#      --top_k 1000
-#
-#  python preprocess/search_misinfo_index.py \
-#      --index_path ${DATASET_PATH}/misinfo-v1 \
-#      --query_path ${DATASET_PATH}/test_s"${SPLIT}".jsonl \
-#      --output_path ${DATASET_PATH}/test_s"${SPLIT}"-bm25-scores.json \
-#      --top_k 1000
-#
-#  python identify/score_predict.py \
-#    --train_path ${DATASET_PATH}/train_s"${SPLIT}".jsonl \
-#    --val_path ${DATASET_PATH}/dev_s"${SPLIT}".jsonl \
-#    --misinfo_path ${DATASET_PATH}/misinfo.json \
-#    --model_name ${MODEL_NAME} \
-#    --train_score_path ${DATASET_PATH}/train_s"${SPLIT}"-bm25-scores.json \
-#    --val_score_path ${DATASET_PATH}/dev_s"${SPLIT}"-bm25-scores.json
-#
-#  python identify/score_predict.py \
-#    --train_path ${DATASET_PATH}/train_s"${SPLIT}".jsonl \
-#    --val_path ${DATASET_PATH}/test_s"${SPLIT}".jsonl \
-#    --misinfo_path ${DATASET_PATH}/misinfo.json \
-#    --threshold_max 10.0 \
-#    --model_name ${MODEL_NAME} \
-#    --train_score_path ${DATASET_PATH}/train_s"${SPLIT}"-bm25-scores.json \
-#    --val_score_path ${DATASET_PATH}/test_s"${SPLIT}"-bm25-scores.json
+  python preprocess/search_misinfo_index.py \
+      --index_path ${DATASET_PATH}/misinfo-v1 \
+      --query_path ${DATASET_PATH}/train_s"${SPLIT}".jsonl \
+      --output_path ${DATASET_PATH}/train_s"${SPLIT}"-bm25-scores.json \
+      --top_k 1000
+
+  python preprocess/search_misinfo_index.py \
+      --index_path ${DATASET_PATH}/misinfo-v1 \
+      --query_path ${DATASET_PATH}/test_s"${SPLIT}".jsonl \
+      --output_path ${DATASET_PATH}/test_s"${SPLIT}"-bm25-scores.json \
+      --top_k 1000
+
+  python identify/score_predict.py \
+    --train_path ${DATASET_PATH}/train_s"${SPLIT}".jsonl \
+    --val_path ${DATASET_PATH}/test_s"${SPLIT}".jsonl \
+    --misinfo_path ${DATASET_PATH}/misinfo.json \
+    --threshold_max 10.0 \
+    --model_name ${MODEL_NAME} \
+    --train_score_path ${DATASET_PATH}/train_s"${SPLIT}"-bm25-scores.json \
+    --val_score_path ${DATASET_PATH}/test_s"${SPLIT}"-bm25-scores.json
 
     SPLIT_FILES="${SPLIT_FILES},models/${MODEL_NAME}/predictions.jsonl"
 done
