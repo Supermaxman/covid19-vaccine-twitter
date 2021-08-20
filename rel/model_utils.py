@@ -299,8 +299,7 @@ class CovidTwitterMisinfoModel(pl.LightningModule):
 			dev_entities,
 			dev_t_labels
 		)
-
-		f1, p, r, threshold, _ = metric_utils.evaluate_m_thresholds(
+		f1, p, r, threshold, _, _, _, _, _ = metric_utils.evaluate_m_thresholds(
 			self.emb_model,
 			dev_entities,
 			dev_relations,
