@@ -25,33 +25,33 @@ MISINFO_EVAL_BATCH_SIZE=8
 MISINFO_EVAL_MODE=centroid
 
 MISINFO_NUM_GPUS=1
-MISINFO_TRAIN=false
-MISINFO_RUN=false
+MISINFO_TRAIN=true
+MISINFO_RUN=true
 
 export TOKENIZERS_PARALLELISM=true
 
 echo "Starting experiment ${RUN_NAME}_${RUN_ID}"
 echo "Reserving ${MISINFO_NUM_GPUS} GPU(s)..."
-#MISINFO_GPUS=`python gpu/request_gpus.py -r ${MISINFO_NUM_GPUS}`
-#if [[ ${MISINFO_GPUS} -eq -1 ]]; then
-#    echo "Unable to reserve ${MISINFO_NUM_GPUS} GPU(s), exiting."
-#    exit 1
-#fi
-#echo "Reserved ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
-#MISINFO_TRAIN_GPUS=${MISINFO_GPUS}
-#MISINFO_EVAL_GPUS=${MISINFO_GPUS}
+MISINFO_GPUS=`python gpu/request_gpus.py -r ${MISINFO_NUM_GPUS}`
+if [[ ${MISINFO_GPUS} -eq -1 ]]; then
+    echo "Unable to reserve ${MISINFO_NUM_GPUS} GPU(s), exiting."
+    exit 1
+fi
+echo "Reserved ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
+MISINFO_TRAIN_GPUS=${MISINFO_GPUS}
+MISINFO_EVAL_GPUS=${MISINFO_GPUS}
 
 DATASET_PATH=data/${DATASET}
 #
 ## trap ctrl+c to free GPUs
-#handler()
-#{
-#    echo "Experiment aborted."
-#    echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
-#    python gpu/free_gpus.py -i ${MISINFO_GPUS}
-#    exit 1
-#}
-#trap handler SIGINT
+handler()
+{
+    echo "Experiment aborted."
+    echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
+    python gpu/free_gpus.py -i ${MISINFO_GPUS}
+    exit 1
+}
+trap handler SIGINT
 
 
 SPLIT_FILES=""
@@ -99,8 +99,8 @@ for (( SPLIT=1; SPLIT<=${NUM_SPLITS}; SPLIT++ )) do
     SPLIT_FILES="${SPLIT_FILES},models/${MODEL_NAME}/results.json"
 done
 
-#echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
-#python gpu/free_gpus.py -i ${MISINFO_GPUS}
+echo "Freeing ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
+python gpu/free_gpus.py -i ${MISINFO_GPUS}
 
 python identify/multi_split_eval_glp.py \
   --input_path ${SPLIT_FILES}
