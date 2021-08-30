@@ -69,7 +69,7 @@ if __name__ == '__main__':
 		num_layers=args.num_layers,
 		device=args.device
 	)
-	max_chars = int(np.percentile([len(t['full_text']) for t in tweets], args.max_length_percentile))
+	max_chars = int(np.percentile([len(t['text']) for t in tweets], args.max_length_percentile))
 
 	print(f'{args.max_length_percentile}-percentile tweet character length: {max_chars}')
 	scores = {}
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 		m_texts = []
 		for t in chunk_tweets:
 			tweet_id = t['id']
-			tweet_text = t['full_text'][:max_chars]
+			tweet_text = t['text'][:max_chars]
 			for m_id, m in misinfo.items():
 				m_text = m[args.misinfo_text_type]
 				tweet_texts.append(tweet_text)
