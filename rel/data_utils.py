@@ -26,29 +26,15 @@ def write_jsonl(data, path):
 			f.write(json_data + '\n')
 
 
-def label_text_to_stance_id(label):
-	# 'agree', 'disagree', 'no_stance', 'not_relevant',
-	if label == 'not_relevant':
-		return 0
-	if label == 'agree':
-		return 1
-	if label == 'disagree':
-		return 2
-	if label == 'no_stance':
-		return 3
-	else:
-		raise ValueError(f'Unknown label: {label}')
-
-
 def label_text_to_relevant_id(label):
 	# 'agree', 'disagree', 'no_stance', 'not_relevant',
-	if label == 'not_relevant':
+	if label == 'Not Relevant':
 		return 0
-	if label == 'agree':
+	if label == 'Agree':
 		return 1
-	if label == 'disagree':
+	if label == 'Disagree':
 		return 1
-	if label == 'no_stance':
+	if label == 'No Stance':
 		return 1
 	else:
 		raise ValueError(f'Unknown label: {label}')
@@ -69,132 +55,6 @@ def flatten(list_of_lists):
 def filter_tweet_text(tweet_text):
 	# TODO consider @<user> and <url> replacing users and urls in tweets
 	return tweet_text
-
-
-def align_tokens(tokens, wpt_tokens, seq_offset=0):
-	align_map = {}
-	for token in tokens:
-		token['wpt_idxs'] = set()
-		start = token['start']
-		end = token['end']
-		for char_idx in range(start, end):
-			sub_token_idx = wpt_tokens.char_to_token(char_idx, sequence_index=seq_offset)
-			# White spaces have no token and will return None
-			if sub_token_idx is not None:
-				align_map[sub_token_idx] = token
-				token['wpt_idxs'].add(sub_token_idx)
-	return align_map
-
-
-def align_token_sequences(m_tokens, t_tokens, wpt_tokens):
-	# print([f'{i}:{m}' for i, m in enumerate(wpt_tokens.tokens())])
-	# print([f'{m["start"]}:{m["end"]}:{m["text"]}' for m in m_tokens])
-	# print([f'{m["start"]}:{m["end"]}:{m["text"]}' for m in t_tokens])
-	m_align_map = align_tokens(m_tokens, wpt_tokens)
-	t_align_map = align_tokens(t_tokens, wpt_tokens, seq_offset=1)
-	align_map = {**m_align_map, **t_align_map}
-	aligned_tokens = []
-	for sub_token_idx in range(len(wpt_tokens['input_ids'])):
-		if sub_token_idx not in align_map:
-			# CLS, SEP, or other special token
-			aligned_token = {
-				'pos': 'NONE',
-				'dep': 'NONE',
-				'head': 'NONE',
-				'sentic': None,
-				'text': '[CLS]' if sub_token_idx == 0 else '[SEP]',
-				'wpt_idxs': {sub_token_idx}
-			}
-			align_map[sub_token_idx] = aligned_token
-		aligned_token = align_map[sub_token_idx]
-		aligned_tokens.append(aligned_token)
-
-	return align_map, aligned_tokens
-
-
-def create_adjacency_matrix(edges, size, t_map, r_map):
-	adj = np.eye(size, dtype=np.float32)
-	for input_idx in range(size):
-		input_idx_text = t_map[input_idx]
-		i_edges = set(flatten([r_map[e_txt] for e_txt in edges[input_idx_text]]))
-		for edge_idx in i_edges:
-			adj[input_idx, edge_idx] = 1.0
-			adj[edge_idx, input_idx] = 1.0
-	return adj
-
-
-def create_edges(m_tokens, t_tokens, wpt_tokens, lex_edge_expanded):
-	seq_len = len(wpt_tokens['input_ids'])
-	align_map, a_tokens = align_token_sequences(m_tokens, t_tokens, wpt_tokens)
-
-	lexical_edges = defaultdict(set)
-	reverse_lexical_dep_edges = defaultdict(set)
-	reverse_lexical_pos_edges = defaultdict(set)
-	lexical_dep_edges = defaultdict(set)
-	lexical_pos_edges = defaultdict(set)
-	root_text = None
-	r_map = defaultdict(set)
-	t_map = {}
-	for token in a_tokens:
-		text = token['text'].lower()
-		head = token['head'].lower()
-		for wpt_idx in token['wpt_idxs']:
-			t_map[wpt_idx] = text
-			r_map[text].add(wpt_idx)
-		pos = token['pos']
-		dep = token['dep']
-		reverse_lexical_dep_edges[dep].add(text)
-		reverse_lexical_pos_edges[pos].add(text)
-		lexical_dep_edges[text].add(dep)
-		lexical_pos_edges[text].add(pos)
-		# will be two roots with two sequences
-		if dep == 'ROOT':
-			root_text = text
-		lexical_edges[text].add(head)
-
-	lexical_edges['[CLS]'].add(root_text)
-	lexical_edges['[SEP]'].add(root_text)
-
-	if 'dep' in lex_edge_expanded:
-		for text in lexical_edges.keys():
-			# expand lexical edges to same dependency roles
-			text_deps = lexical_dep_edges[text]
-			lexical_edges[text] = lexical_edges[text].union(
-				set(flatten(reverse_lexical_dep_edges[dep] for dep in text_deps))
-			)
-
-	if 'pos' in lex_edge_expanded:
-		for text in lexical_edges.keys():
-			# expand lexical edges to same pos tags
-			text_pos = lexical_pos_edges[text]
-			lexical_edges[text] = lexical_edges[text].union(
-				set(flatten(reverse_lexical_pos_edges[pos] for pos in text_pos))
-			)
-
-	lexical_adj = create_adjacency_matrix(
-		edges=lexical_edges,
-		size=seq_len,
-		t_map=t_map,
-		r_map=r_map
-	)
-
-	edges = {
-		'lexical': lexical_adj,
-	}
-
-	return edges
-
-
-def get_token_features(token):
-	token_data = {
-		'text': token.text,
-		'pos': token.pos_,
-		'dep': token.dep_,
-		'head': token.head.text,
-		'start': token.idx,
-		'end': token.idx + len(token.text),
-	}
-	return token_data
 
 
 class MisinfoDataset(Dataset):
@@ -244,7 +104,7 @@ class MisinfoDataset(Dataset):
 					'text': tweet_text,
 					'token_data': token_data,
 				}
-				d_misinfo = doc['misinfo']
+				d_misinfo = doc['labels']
 				if m_id in d_misinfo:
 					m_label = label_text_to_relevant_id(d_misinfo[m_id])
 					if m_label > 0:
@@ -417,7 +277,7 @@ class MisinfoEntityDataset(Dataset):
 			)
 			t_labels = []
 			for m_id, m in misinfo.items():
-				d_misinfo = doc['misinfo']
+				d_misinfo = doc['labels']
 				if m_id in d_misinfo:
 					m_label = label_text_to_relevant_id(d_misinfo[m_id])
 					if m_label > 0:
