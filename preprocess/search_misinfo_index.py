@@ -40,7 +40,7 @@ if __name__ == '__main__':
 	scores = {}
 	for t in tqdm(tweets):
 		t_id = t['id']
-		t_text = t['full_text']
+		t_text = t['text']
 		scores[t_id] = {}
 		hits = searcher.search(t_text, k=args.top_k)
 		for rank, hit in enumerate(hits[:args.top_k], start=1):

@@ -87,7 +87,7 @@ class MisinfoDataset(Dataset):
 
 		for doc in tqdm(documents, desc='loading documents...'):
 			tweet_id = doc['id']
-			tweet_text = doc['full_text'].strip().replace('\r', ' ').replace('\n', ' ')
+			tweet_text = doc['text'].strip().replace('\r', ' ').replace('\n', ' ')
 			tweet_text = filter_tweet_text(tweet_text)
 
 			token_data = tokenizer(
@@ -269,7 +269,7 @@ class MisinfoEntityDataset(Dataset):
 		self.examples = []
 		for doc in tqdm(documents, desc='loading documents...'):
 			tweet_id = doc['id']
-			tweet_text = doc['full_text'].strip().replace('\r', ' ').replace('\n', ' ')
+			tweet_text = doc['text'].strip().replace('\r', ' ').replace('\n', ' ')
 			tweet_text = filter_tweet_text(tweet_text)
 
 			token_data = tokenizer(
