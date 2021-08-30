@@ -30,9 +30,9 @@ def label_text_to_relevant_id(label):
 	# 'agree', 'disagree', 'no_stance', 'not_relevant',
 	if label == 'Not Relevant':
 		return 0
-	if label == 'Agree':
+	if label == 'Accept':
 		return 1
-	if label == 'Disagree':
+	if label == 'Reject':
 		return 1
 	if label == 'No Stance':
 		return 1

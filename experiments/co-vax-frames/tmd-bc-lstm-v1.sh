@@ -6,7 +6,13 @@ RUN_ID=${filename::-3}
 RUN_NAME=HLTRI_COVID_MISINFO
 
 # collection
-DATASET=v1
+
+DATA_PATH=/shared/hltdir4/disk1/team/data/corpora/co-vax-frames
+DATASET=covid19
+MISINFO_NAME=co-vax-frames
+TRAIN_NAME=co-vax-frames-train
+DEV_NAME=co-vax-frames-dev
+TEST_NAME=co-vax-frames-test
 
 # major hyper-parameters for system
 MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
@@ -47,7 +53,7 @@ echo "Reserved ${MISINFO_NUM_GPUS} GPUs: ${MISINFO_GPUS}"
 MISINFO_TRAIN_GPUS=${MISINFO_GPUS}
 MISINFO_EVAL_GPUS=${MISINFO_GPUS}
 
-DATASET_PATH=data/${DATASET}
+DATASET_PATH=${DATA_PATH}/${DATASET}
 ARTIFACTS_PATH=artifacts/${DATASET}
 
 # trap ctrl+c to free GPUs
@@ -68,10 +74,10 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --model_type ${MISINFO_MODEL_TYPE} \
       --model_layers ${MISINFO_MODEL_LAYERS} \
       --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
-      --train_misinfo_path ${DATASET_PATH}/misinfo.json \
-      --val_misinfo_path ${DATASET_PATH}/misinfo.json \
-      --train_path ${DATASET_PATH}/train.jsonl \
-      --val_path ${DATASET_PATH}/dev.jsonl \
+      --train_misinfo_path ${DATASET_PATH}/${MISINFO_NAME}.json \
+      --val_misinfo_path ${DATASET_PATH}/${MISINFO_NAME}.json \
+      --train_path ${DATASET_PATH}/${TRAIN_NAME}.jsonl \
+      --val_path ${DATASET_PATH}/${DEV_NAME}.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
       --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
@@ -92,8 +98,8 @@ if [[ ${MISINFO_PREDICT} = true ]]; then
       --model_type ${MISINFO_MODEL_TYPE} \
       --model_layers ${MISINFO_MODEL_LAYERS} \
       --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
-      --misinfo_path ${DATASET_PATH}/misinfo.json \
-      --val_path ${DATASET_PATH}/dev.jsonl \
+      --misinfo_path ${DATASET_PATH}/${MISINFO_NAME}.json \
+      --val_path ${DATASET_PATH}/${DEV_NAME}.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
       --output_path ${ARTIFACTS_PATH}/${RUN_NAME}_${RUN_ID}_DEV \
@@ -108,7 +114,7 @@ if [[ ${MISINFO_PREDICT} = true ]]; then
       --model_type ${MISINFO_MODEL_TYPE} \
       --model_layers ${MISINFO_MODEL_LAYERS} \
       --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
-      --misinfo_path ${DATASET_PATH}/misinfo.json \
+      --misinfo_path ${DATASET_PATH}/${MISINFO_NAME}.json \
       --val_path ${DATASET_PATH}/test.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
@@ -127,9 +133,9 @@ if [[ ${MISINFO_EVAL} = true ]]; then
       --model_layers ${MISINFO_MODEL_LAYERS} \
       --emb_loss_norm ${MISINFO_EMB_LOSS_NORM} \
       --eval_mode ${MISINFO_EVAL_MODE} \
-      --misinfo_path ${DATASET_PATH}/misinfo.json \
-      --val_path ${DATASET_PATH}/dev.jsonl \
-      --test_path ${DATASET_PATH}/test.jsonl \
+      --misinfo_path ${DATASET_PATH}/${MISINFO_NAME}.json \
+      --val_path ${DATASET_PATH}/${DEV_NAME}.jsonl \
+      --test_path ${DATASET_PATH}/${TEST_NAME}.jsonl \
       --pre_model_name ${MISINFO_PRE_MODEL_NAME} \
       --model_name MISINFO-${DATASET}-${RUN_NAME}_${RUN_ID} \
       --max_seq_len ${MISINFO_MAX_SEQ_LEN} \
