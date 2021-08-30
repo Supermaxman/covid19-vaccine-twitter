@@ -26,8 +26,8 @@ def create_dataset(tweets, misinfo, tweet_scores):
 			else:
 				m_score = t_scores[m_id]
 			m_label = 0
-			if m_id in t['misinfo']:
-				m_label = label_text_to_relevant_id(t['misinfo'][m_id])
+			if m_id in t['labels']:
+				m_label = label_text_to_relevant_id(t['labels'][m_id])
 
 			labels[t_idx, m_map[m_id]] = m_label
 			scores[t_idx, m_map[m_id]] = m_score
@@ -115,7 +115,7 @@ if __name__ == '__main__':
 	rows = []
 	for t_idx, tweet in enumerate(val_data):
 		tweet_id = tweet['id']
-		t_text = tweet['full_text']
+		t_text = tweet['text']
 		for m_id, m in misinfo.items():
 			m_text = m['text']
 			m_label = v_labels[t_idx, m_map[m_id]].item()
