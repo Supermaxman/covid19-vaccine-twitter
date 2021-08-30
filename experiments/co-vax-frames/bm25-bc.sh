@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
+DATA_PATH=/shared/hltdir4/disk1/team/data/corpora/co-vax-frames
 DATASET=covid19
-DATASET_PATH=data/${DATASET}
 MISINFO_NAME=co-vax-frames
+
+DATASET_PATH=${DATA_PATH}/${DATASET}
 
 export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.7.10-0.fc30.x86_64/
 
