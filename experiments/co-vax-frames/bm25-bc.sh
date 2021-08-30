@@ -3,6 +3,8 @@
 DATA_PATH=/shared/hltdir4/disk1/team/data/corpora/co-vax-frames
 DATASET=covid19
 MISINFO_NAME=co-vax-frames
+TRAIN_NAME=co-vax-frames-train
+TEST_NAME=co-vax-frames-test
 
 DATASET_PATH=${DATA_PATH}/${DATASET}
 
@@ -26,21 +28,21 @@ python -m pyserini.index \
 
 python preprocess/search_misinfo_index.py \
     --index_path ${DATASET_PATH}/misinfo-v1 \
-    --query_path ${DATASET_PATH}/train.jsonl \
-    --output_path ${DATASET_PATH}/train-bm25-scores.json \
+    --query_path ${DATASET_PATH}/${TRAIN_NAME}.jsonl \
+    --output_path ${DATASET_PATH}/${TRAIN_NAME}-bm25-scores.json \
     --top_k 1000
 
 python preprocess/search_misinfo_index.py \
     --index_path ${DATASET_PATH}/misinfo-v1 \
-    --query_path ${DATASET_PATH}/test.jsonl \
-    --output_path ${DATASET_PATH}/test-bm25-scores.json \
+    --query_path ${DATASET_PATH}/${TEST_NAME}.jsonl \
+    --output_path ${DATASET_PATH}/${TEST_NAME}-bm25-scores.json \
     --top_k 1000
 
 python identify/score_predict.py \
-  --train_path ${DATASET_PATH}/train.jsonl \
-  --val_path ${DATASET_PATH}/test.jsonl \
+  --train_path ${DATASET_PATH}/${TRAIN_NAME}.jsonl \
+  --val_path ${DATASET_PATH}/${TEST_NAME}.jsonl \
   --misinfo_path ${DATASET_PATH}/${MISINFO_NAME}.json \
   --threshold_max 10.0 \
   --model_name bm25-scores \
-  --train_score_path ${DATASET_PATH}/train-bm25-scores.json \
-  --val_score_path ${DATASET_PATH}/test-bm25-scores.json
+  --train_score_path ${DATASET_PATH}/${TRAIN_NAME}-bm25-scores.json \
+  --val_score_path ${DATASET_PATH}/${TEST_NAME}-bm25-scores.json
