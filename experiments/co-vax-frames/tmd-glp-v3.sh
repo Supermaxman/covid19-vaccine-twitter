@@ -17,7 +17,7 @@ TEST_NAME=co-vax-frames-test
 # major hyper-parameters for system
 MISINFO_PRE_MODEL_NAME=digitalepidemiologylab/covid-twitter-bert-v2
 
-MISINFO_BATCH_SIZE=6
+MISINFO_BATCH_SIZE=4
 MISINFO_MAX_SEQ_LEN=96
 MISINFO_EMB_SIZE=8
 MISINFO_EMB_MODEL=transms
@@ -25,6 +25,8 @@ MISINFO_EMB_LOSS_NORM=1
 MISINFO_LEARNING_RATE=1e-3
 MISINFO_GAMMA=1.0
 MISINFO_TRAIN_EPOCHS=40
+MISINFO_ACCUMULATE_STEPS=4
+
 MISINFO_EVAL_BATCH_SIZE=8
 
 MISINFO_NUM_GPUS=1
@@ -78,6 +80,7 @@ if [[ ${MISINFO_TRAIN} = true ]]; then
       --learning_rate ${MISINFO_LEARNING_RATE} \
       --gamma ${MISINFO_GAMMA} \
       --epochs ${MISINFO_TRAIN_EPOCHS} \
+      --accumulate_steps ${MISINFO_ACCUMULATE_STEPS} \
       --gpus ${MISINFO_TRAIN_GPUS}
 
 fi

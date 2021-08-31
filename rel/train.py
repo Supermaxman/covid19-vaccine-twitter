@@ -41,7 +41,9 @@ if __name__ == '__main__':
 	parser.add_argument('-em', '--emb_model', default='transd')
 	parser.add_argument('-mt', '--model_type', default='bert')
 	parser.add_argument('-mtl', '--model_layers', default=1, type=int)
+	parser.add_argument('-acs', '--accumulate_steps', default=1, type=int)
 	parser.add_argument('-wd', '--weight_decay', default=0.0, type=float)
+	parser.add_argument('-vci', '--val_check_interval', default=1.0, type=float)
 	parser.add_argument('-gcv', '--gradient_clip_val', default=1.0, type=float)
 	parser.add_argument('-th', '--threshold', default=None, type=float)
 
@@ -236,6 +238,8 @@ if __name__ == '__main__':
 			gradient_clip_val=args.gradient_clip_val,
 			deterministic=deterministic,
 			checkpoint_callback=False,
+			accumulate_grad_batches=args.accumulate_steps,
+			val_check_interval=args.val_check_interval
 		)
 	try:
 		logging.info('Training...')
