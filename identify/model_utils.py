@@ -426,12 +426,6 @@ class CovidTwitterPairwiseMisinfoModel(BaseCovidTwitterMisinfoModel):
 			bias=False
 		)
 
-		self.gan_classification_layer = nn.Linear(
-			self.config.hidden_size,
-			1,
-			bias=True
-		)
-
 		self.score_func = torch.nn.Sigmoid()
 
 	def forward(self, input_ids, attention_mask, token_type_ids, batch):
