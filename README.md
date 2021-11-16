@@ -1,6 +1,6 @@
 # Automatic Detection of COVID-19 Vaccine Misinformation with Graph Link Prediction
 
-This repository contains the code utilized in the following research paper:
+This repository contains the code and annotations utilized in the following research paper:
 
 ``[Automatic Detection of COVID-19 Vaccine Misinformation with Graph Link Prediction](https://arxiv.org/abs/2108.02314)".
 
@@ -24,4 +24,6 @@ Please cite as the following:
 }
 ```
 
+Annotated tweet ids and misinformation targets can be found in the annotations folder.
+You will need to use the Twitter API to download the text of these tweets, as we cannot directly provide this info.
 
