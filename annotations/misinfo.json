@@ -1,0 +1,104 @@
+{
+  "1": {
+    "title": "mRNA alters DNA",
+    "text": "RNA alters a person's DNA when taking the COVID-19 vaccine.",
+    "alternate_text": "RNA alters a person's DNA when taking the coronavirus vaccine.",
+    "source": "https://en.wikipedia.org/wiki/Misinformation_related_to_the_COVID-19_pandemic#Vaccine_misinformation"
+  },
+  "2": {
+    "title": "Infertility",
+    "text": "The COVID-19 vaccine causes infertility or miscarriages in women.",
+    "alternate_text": "The coronavirus vaccine causes infertility or miscarriages in women.",
+    "source": "https://en.wikipedia.org/wiki/Misinformation_related_to_the_COVID-19_pandemic#Vaccine_misinformation"
+  },
+  "3": {
+    "title": "Natural immunity",
+    "text": "Natural COVID-19 immunity is better than immunity derived from a COVID-19 vaccine.",
+    "alternate_text": "Natural immunity is better than immunity derived from a coronavirus vaccine.",
+    "source": "https://health.ucdavis.edu/health-news/newsroom/the-real-facts-about-common-covid-19-vaccine-myths/2020/12"
+  },
+  "4": {
+    "title": "Bell's palsy",
+    "text": "The COVID-19 vaccine causes Bell's palsy.",
+    "alternate_text": "The coronavirus vaccine causes Bell's palsy.",
+    "source": "https://en.wikipedia.org/wiki/Misinformation_related_to_the_COVID-19_pandemic#Vaccine_misinformation"
+  },
+  "5": {
+    "title": "Antibody-dependent enhancement",
+    "text": "The immune system overreacts to COVID-19 after taking the COVID-19 vaccine through antibody-dependent enhancement.",
+    "alternate_text": "The immune system overreacts to coronavirus after taking the coronavirus vaccine through antibody-dependent enhancement.",
+    "source": "https://en.wikipedia.org/wiki/Misinformation_related_to_the_COVID-19_pandemic#Vaccine_misinformation"
+  },
+  "7": {
+    "title": "Aborted fetus material",
+    "text": "The COVID-19 vaccine contains tissue from aborted fetuses.",
+    "alternate_text": "The coronavirus vaccine contains tissue from aborted fetuses.",
+    "source": "https://en.wikipedia.org/wiki/Misinformation_related_to_the_COVID-19_pandemic#Vaccine_misinformation"
+  },
+  "8": {
+    "title": "Microchip tracking",
+    "text": "The COVID-19 vaccine was developed to control the general population either through microchip tracking or nanotransducers in our brains.",
+    "alternate_text": "The coronavirus vaccine was developed to control the general population either through microchip tracking or nanotransducers in our brains.",
+    "source": "https://www.mayoclinichealthsystem.org/hometown-health/featured-topic/covid-19-vaccine-myths-debunked"
+  },
+  "9": {
+    "title": "Deadlier than COVID-19",
+    "text": "More people will die as a result of a negative side effect to the COVID-19 vaccine than would actually die from the coronavirus.",
+    "alternate_text": "More people will die as a result of a negative side effect to the coronavirus vaccine than would actually die from the virus.",
+    "source": "https://www.mayoclinichealthsystem.org/hometown-health/featured-topic/covid-19-vaccine-myths-debunked"
+  },
+  "10": {
+    "title": "Side effects",
+    "text": "There are severe side effects of the COVID-19 vaccines, worse than having the virus.",
+    "alternate_text": "There are severe side effects of the coronavirus vaccines, worse than having the virus.",
+    "source": "https://www.mayoclinichealthsystem.org/hometown-health/featured-topic/covid-19-vaccine-myths-debunked"
+  },
+  "11": {
+    "title": "Rapid development",
+    "text": "The COVID-19 vaccine is not safe because it was rapidly developed and tested.",
+    "alternate_text": "The coronavirus vaccine is not safe because it was rapidly developed and tested.",
+    "source": "https://www.mayoclinichealthsystem.org/hometown-health/featured-topic/covid-19-vaccine-myths-debunked"
+  },
+  "12": {
+    "title": "Vaccine causes COVID-19",
+    "text": "The COVID-19 vaccine can cause COVID-19 because it contains the live virus.",
+    "alternate_text": "The coronavirus vaccine can cause COVID-19 because it contains the live virus.",
+    "source": "https://www.muhealth.org/our-stories/covid-19-vaccine-myths-vs-facts"
+  },
+  "13": {
+    "title": "Testing positive",
+    "text": "The COVID-19 vaccine causes people to test positive for COVID-19.",
+    "alternate_text": "The coronavirus vaccine causes people to test positive for COVID-19.",
+    "source": "https://www.muhealth.org/our-stories/covid-19-vaccine-myths-vs-facts"
+  },
+  "14": {
+    "title": "Risk for other illnesses",
+    "text": "The COVID-19 vaccine can increase risk for other illnesses.",
+    "alternate_text": "The coronavirus vaccine can increase risk for other illnesses.",
+    "source": "https://www.muhealth.org/our-stories/covid-19-vaccine-myths-vs-facts"
+  },
+  "15": {
+    "title": "Vaccine trial deaths",
+    "text": "Many people already have died from the COVID-19 vaccine trials.",
+    "alternate_text": "Many people already have died from the coronavirus vaccine trials.",
+    "source": "https://www.uab.edu/news/youcanuse/item/11771-debunking-the-myths-about-the-covid-19-vaccine"
+  },
+  "16": {
+    "title": "Vaccine causes autism",
+    "text": "The COVID-19 vaccine can cause autism.",
+    "alternate_text": "The coronavirus vaccine can cause autism.",
+    "source": "https://www.uab.edu/news/youcanuse/item/11771-debunking-the-myths-about-the-covid-19-vaccine"
+  },
+  "17": {
+    "title": "Egg allergy",
+    "text": "The COVID-19 vaccine should not be taken by people who are allergic to eggs.",
+    "alternate_text": "The coronavirus vaccine should not be taken by people who are allergic to eggs.",
+    "source": "https://newsnetwork.mayoclinic.org/discussion/covid-19-vaccine-myths-debunked/"
+  },
+  "20": {
+    "title": "Vaccine toxins",
+    "text": "Vaccines contain unsafe toxins such as formaldehyde, mercury or aluminum.",
+    "alternate_text": "The coronavirus vaccine contains unsafe toxins such as formaldehyde, mercury or aluminum.",
+    "source": "https://www.publichealth.org/public-awareness/understanding-vaccines/vaccine-myths-debunked/"
+  }
+}
