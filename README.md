@@ -2,25 +2,21 @@
 
 This repository contains the code and annotations utilized in the following research paper:
 
-``[Automatic Detection of COVID-19 Vaccine Misinformation with Graph Link Prediction](https://arxiv.org/abs/2108.02314)".
+``[Automatic Detection of COVID-19 Vaccine Misinformation with Graph Link Prediction](https://doi.org/10.1016/j.jbi.2021.103955)".
 
 Please cite as the following:
 
 ```
-@article{DBLP:journals/corr/abs-2108-02314,
-  author    = {Maxwell A. Weinzierl and
-               Sanda M. Harabagiu},
-  title     = {Automatic Detection of {COVID-19} Vaccine Misinformation with Graph
-               Link Prediction},
-  journal   = {CoRR},
-  volume    = {abs/2108.02314},
-  year      = {2021},
-  url       = {https://arxiv.org/abs/2108.02314},
-  eprinttype = {arXiv},
-  eprint    = {2108.02314},
-  timestamp = {Wed, 11 Aug 2021 15:24:08 +0200},
-  biburl    = {https://dblp.org/rec/journals/corr/abs-2108-02314.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
+@article{weinzierl-covid-glp,
+	title        = {Automatic Detection of COVID-19 Vaccine Misinformation with Graph Link Prediction},
+	author       = {Maxwell A. Weinzierl and Sanda M. Harabagiu},
+	year         = 2021,
+	journal      = {Journal of Biomedical Informatics},
+	pages        = 103955,
+	doi          = {https://doi.org/10.1016/j.jbi.2021.103955},
+	issn         = {1532-0464},
+	url          = {https://www.sciencedirect.com/science/article/pii/S1532046421002847},
+	keywords     = {Natural Language Processing, Machine learning, COVID-19, vaccine misinformation, Social Media, knowledge graph embedding}
 }
 ```
 
