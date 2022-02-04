@@ -25,7 +25,7 @@ Please cite as the following:
 
 We have expanded the dataset as *CoVaxLies* v2 with stance annotations, more misinformation targets, and a taxonomy of misinformation.
 
-[Link](https://github.com/Supermaxman/vaccine-lies)
+[Link](https://github.com/Supermaxman/vaccine-lies/tree/master/covid19)
 
 
 ## *CoVaxLies* v1 Annotations
